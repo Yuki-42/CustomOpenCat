@@ -19,8 +19,8 @@ from SkillComposer import *
 
 translator = Translator()
 
-apps = ['Firmware Uploader', 'Joint Calibrator',
-        'Skill Composer']  # This is used in creating the buttons for other parts of the app, this needs to
+apps = ['Firmware Uploader', 'Joint Calibrator', 'Skill Composer']  # This is used in creating the buttons for other
+# parts of the app, this needs to
 
 
 # be rewritten
