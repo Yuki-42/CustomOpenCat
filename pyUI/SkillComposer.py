@@ -31,8 +31,6 @@ from tkinter import ttk
 translator = Translator
 
 
-def txt(key):
-    return language.get(key, textEN[key])
 
 
 def rgbtohex(r, g, b):
@@ -1803,7 +1801,7 @@ class SkillComposer:
             self.keepChecking = False  # close the background thread for checking serial port
             self.window.destroy()
             closeAllSerial(goodPorts)
-            os._exit(0)
+            exit(0)
 
 
 if __name__ == '__main__':
@@ -1817,7 +1815,8 @@ if __name__ == '__main__':
         #            t.start()
         SkillComposer(model, language)
         closeAllSerial(goodPorts)
-        os._exit(0)
+        exit(0)
+
     except Exception as e:
         logger.info("Exception")
         closeAllSerial(goodPorts)

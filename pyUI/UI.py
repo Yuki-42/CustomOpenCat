@@ -1,5 +1,9 @@
 #!/usr/bin/python3
-# -*- coding: UTF-8 -*-
+# -*- encoding: UTF-8 -*-
+
+"""
+The UI file for the project. This file contains the UI class.
+"""
 
 # Rongzhong Li
 # Petoi LLC
@@ -9,7 +13,8 @@
 
 
 # New imports
-from config import Config
+from utils.config import Config
+from utils.translator import Translator
 
 from FirmwareUploader import *
 from SkillComposer import *
@@ -19,10 +24,18 @@ from commonVar import *
 translator = Translator()
 
 apps = ['Firmware Uploader', 'Joint Calibrator', 'Skill Composer']  # This is used in creating the buttons for other parts of the app, this needs to
+
+
 # be rewritten
 
 
 class UI:
+    """
+    This class is the main UI class, it is responsible for creating the main window and the buttons that are used to
+    access the other parts of the app. It also contains the code that is used to create the buttons and the code that
+    is used to create the window.
+    """
+
     def __init__(self):
         self.logger = create_logger("UI", "UI", "UI_", "DEBUG")
 
@@ -33,46 +46,16 @@ class UI:
 
         self.logger.debug("Config Initialised")
 
+        self.logger.debug("Initializing Translator")    # This is used to translate the UI into different languages
+        self.translator = Translator()
+        self.logger.debug("Translator Initialised")
 
-
-
-
-        global model
-        try:
-
-            lines = [line.split('\n')[0] for line in lines]  # remove the '\n' at the end of each line
-            self.defaultLan = lines[0]
-            model = lines[1]
-            self.defaultPath = lines[2]
-            self.defaultSwVer = lines[3]
-            self.defaultBdVer = lines[4]
-            self.defaultMode = lines[5]
-            if len(lines) >= 8:
-                self.defaultCreator = lines[6]
-                self.defaultLocation = lines[7]
-                self.configuration = [self.defaultLan, model, self.defaultPath, self.defaultSwVer, self.defaultBdVer,
-                                      self.defaultMode, self.defaultCreator, self.defaultLocation]
-            else:
-                self.configuration = [self.defaultLan, model, self.defaultPath, self.defaultSwVer, self.defaultBdVer,
-                                      self.defaultMode]
-
-
-
-        except Exception as e:
-            print('Create configuration file')
-            self.defaultLan = 'English'
-            model = 'Bittle'
-            self.defaultPath = releasePath
-            self.defaultSwVer = '2.0'
-            self.defaultBdVer = NyBoard_version
-            self.defaultMode = 'Standard'
-            self.configuration = [self.defaultLan, model, self.defaultPath, self.defaultSwVer, self.defaultBdVer,
-                                  self.defaultMode]
-            # raise e
-
-
+    def start(self):
+        """
+        This function is used to start the UI.
+        """
+        self.logger.debug("Initializing Window")
         self.window = Tk()
-        self.ready = False
 
         self.OSname = self.window.call('tk', 'windowingsystem')
         if self.OSname == 'win32':
@@ -84,13 +67,14 @@ class UI:
 
         self.myFont = tkFont.Font(
             family='Times New Roman', size=20, weight='bold')
-        self.window.title(translator.getTranslation(config.laungage, 'uiTitle'))
+        self.window.title(translator.getTranslation(self.config.language, 'uiTitle'))
         self.createMenu()
         bw = 23
         self.modelLabel = Label(self.window, text=model, font=self.myFont)
         self.modelLabel.grid(row=0, column=0, pady=10)
-        for i in range(len(apps)):
-            Button(self.window, text=txt(apps[i]), font=self.myFont, fg='blue', width=bw, relief='raised',
+
+        for i in range(len(apps)):  # What the fuck is this trying to do
+            Button(self.window, text=translator.getTranslation(self.config.language, apps[i]), font=self.myFont, fg='blue', width=bw, relief='raised',
                    command=lambda app=apps[i]: self.utility(app)).grid(row=1 + i, column=0, padx=10, pady=(0, 10))
 
         self.ready = True
@@ -106,17 +90,19 @@ class UI:
         file = Menu(self.menubar, tearoff=0, background='#ffcc99', foreground='black')
         for key in NaJoints:
             file.add_command(label=key, command=lambda model=key: self.changeModel(model))
-        self.menubar.add_cascade(label=txt('Model'), menu=file)
+        self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'Model'), menu=file)
 
         lan = Menu(self.menubar, tearoff=0)
-        for l in languageList:
-            lan.add_command(label=languageList[l]['lanOption'], command=lambda lanChoice=l: self.changeLan(lanChoice))
 
-        self.menubar.add_cascade(label=txt('lanMenu'), menu=lan)
+        for l in translator.languages:  # This is used to create the language menu
+            lan.add_command(label=translator.getTranslation(l, "lanOption"),
+                            command=lambda lanChoice=l: self.changeLan(lanChoice))
+
+        self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'lanMenu'), menu=lan)
 
         helpMenu = Menu(self.menubar, tearoff=0)
-        helpMenu.add_command(label=txt('About'), command=self.showAbout)
-        self.menubar.add_cascade(label=txt('Help'), menu=helpMenu)
+        helpMenu.add_command(label=self.translator.getTranslation(self.config.language, 'About'), command=self.showAbout)
+        self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'Help'), menu=helpMenu)
 
         self.window.config(menu=self.menubar)
 
@@ -126,27 +112,38 @@ class UI:
         self.modelLabel.configure(text=model)
         print(model)
 
-    def changeLan(self, l):
-        global language
-        if self.ready and txt('lan') != l:
-            self.defaultLan = l
-            print(self.defaultLan)
-            language = copy.deepcopy(languageList[l])
+    def changeLan(self, newLanguage):  # Changes the window language
+        """
+        This function is used to change the language of the UI. It takes in a language code and then changes the UI to
+        that language.
+
+        Args:
+            newLanguage (str): The language code of the language that the UI should be changed to.
+        """
+        # Check to make sure that the UI is not already in the language that is being requested. The check is done here
+        # as it makes the code more readable to have it here.
+        if newLanguage == self.config.language:
+            self.logger.warning(f"Attempted to change language to {newLanguage} when already in that language")
+            return
+
+        # Check if the language that is being requested is a valid language code
+        elif newLanguage not in translator.languages:
+            self.logger.error(f"Attempted to change language to {newLanguage} which is not a valid language code")
+            return
+
+        else:
+            self.logger.info(f"Changing language to {newLanguage}")
+            self.config.language = newLanguage
+
             self.menubar.destroy()
             self.createMenu()
-            self.window.title(txt('uiTitle'))
-            for i in range(len(apps)):
-                self.window.winfo_children()[1 + i].config(text=txt(apps[i]))
+            self.window.title(translator.getTranslation(self.config.language, 'uiTitle'))
 
-    def saveConfigToFile(self, filename, config):
-        print(config)
-        f = open(filename, 'w+')
-        lines = '\n'.join(config) + '\n'
-        f.writelines(lines)
-        f.close()
+            for i in range(len(apps)):  # I have no idea what this is trying to do but it does not work
+                self.window.winfo_children()[1 + i].config(text=self.translator.getTranslation(self.config.language, apps[i]))
+
 
     def utility(self, app):
-        self.saveConfigToFile(defaultConfPath, self.configuration)
         self.window.destroy()
 
         if app == 'Firmware Uploader':
@@ -163,10 +160,10 @@ class UI:
                             u'Petoi Desktop App\nOpen Source on GitHub\nCopyright © Petoi LLC\nwww.petoi.com')
 
     def on_closing(self):
-        if messagebox.askokcancel(txt('Quit'), txt('Do you want to quit?')):
+        if messagebox.askokcancel(self.translator.getTranslation(self.config.language, 'Quit'),
+                                  self.translator.getTranslation(self.config.language, 'Do you want to quit?')):
             # configuration = [self.defaultLan, model, self.defaultPath, self.defaultSwVer, self.defaultBdVer,
             #                  self.defaultMode]    # self.defaultCreator, self.defaultLocation
-            self.saveConfigToFile(defaultConfPath, self.configuration)
             self.window.destroy()
 
 

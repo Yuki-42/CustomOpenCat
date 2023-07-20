@@ -15,10 +15,12 @@ port_list_number = []
 # list of serial port names
 port_list_name = []
 
+
 class Communication(object):
     """
     Python serial communication package class
     """
+
     # initialization
     def __init__(self, com, bps, timeout):
         self.port = com  # serial port number
@@ -40,7 +42,6 @@ class Communication(object):
         except Exception as e:
             print("---Exception---：", e)
 
-
     def Print_Name(self):
         """
         Print the basic information of the device
@@ -58,7 +59,6 @@ class Communication(object):
         print(self.main_engine.dsrdtr)  # hardware (DSR/DTR) flow control setting
         print(self.main_engine.interCharTimeout)  # character interval timeout
 
-
     def Open_Engine(self):
         """
         open serial port
@@ -68,7 +68,6 @@ class Communication(object):
         if not self.main_engine.is_open:
             self.main_engine.open()
             Ret = True
-
 
     def Close_Engine(self):
         """
@@ -80,7 +79,6 @@ class Communication(object):
         if self.main_engine.is_open:
             self.main_engine.close()  # close serial port
             Ret = False
-
 
     @staticmethod
     def Print_Used_Com():
@@ -97,8 +95,8 @@ class Communication(object):
                 port_list_number.append(each_port[0])
                 port_list_name.append(each_port[1])
 
-#        print(port_list_number)
-#        print(port_list_name)
+        #        print(port_list_number)
+        #        print(port_list_name)
         return port_list_number
 
     # Receive data of specified size
@@ -125,7 +123,6 @@ class Communication(object):
         :return:
         """
         return self.main_engine.readline()
-
 
     def Send_data(self, data):
         """
@@ -171,7 +168,7 @@ class Communication(object):
                     if way == 1:
                         # overall reception
                         self.data = self.main_engine.read(self.main_engine.in_waiting).decode("utf-8")  # method 1
-                        #self.data = self.main_engine.read_all()  # method 2
+                        # self.data = self.main_engine.read_all()  # method 2
                         print("receive ascii data：", self.data)
 
                         '''
@@ -187,13 +184,3 @@ class Communication(object):
                 print("Exception report：", e)
 
         print("Data received！")
-
-
-# if __name__ == '__main__':
-#     Communication.Print_Used_Com()
-#     port = port_list_number
-#     myCom = Communication(port[0], 115200, 0.5)
-#     print("Ret = ", Ret)
-#     myCom.Open_Engine()
-#     myCom.Receive_data(1)
-#     myCom.Close_Engine()

@@ -4,7 +4,7 @@ text and the value being the translated text. The dictionary is then imported in
 displayed in the UI.
 """
 
-from misc import create_logger
+from .misc import create_logger
 
 versionNum = '1.1.0'
 dateStr = '2023-07-12'
@@ -1909,6 +1909,10 @@ Ulteriori dettagli sono disponibili su https://docs.petoi.com/upload-firmware.\n
 
 
 class Translator:
+    """
+    Translator class for translating text to different languages for the UI.
+    """
+
     def __init__(self):
         self.logger = create_logger("Translator", "Translator", "Translator_", level="ERROR")
         self.languageList = {
@@ -1922,6 +1926,16 @@ class Translator:
             'Thai': textTH,
             # to be added
         }
+
+    @property
+    def languages(self) -> list:
+        """
+        Returns a list of all available languages.
+
+        Returns:
+            list: List of all available languages.
+        """
+        return list(self.languageList.keys())
 
     def getTranslation(self, language: str, text: str) -> str:
         """
@@ -1939,3 +1953,100 @@ class Translator:
         except KeyError as error:  # Catches the error in order for the error to be logged and then re-raises the error
             self.logger.error(f"Key {text} not found for language {language}")
             raise error
+
+
+# Classes named after the language they translate to. This is done to make it easier to add new languages.
+class English:
+    """
+    English translation class.
+    """
+
+    def __str__(self):
+        return "English"
+
+    def __repr__(self):
+        return "English"
+
+
+class SimplifiedChinese:
+    """
+    Simplified Chinese translation class.
+    """
+
+    def __str__(self):
+        return "Simplified Chinese"
+
+    def __repr__(self):
+        return "Simplified Chinese"
+
+
+class TraditionalChinese:
+    """
+    Traditional Chinese translation class.
+    """
+
+    def __str__(self):
+        return "Traditional Chinese"
+
+    def __repr__(self):
+        return "Traditional Chinese"
+
+
+class German:
+    """
+    German translation class.
+    """
+
+    def __str__(self):
+        return "German"
+
+    def __repr__(self):
+        return "German"
+
+
+class Italian:
+    """
+    Italian translation class.
+    """
+
+    def __str__(self):
+        return "Italian"
+
+    def __repr__(self):
+        return "Italian"
+
+
+class French:
+    """
+    French translation class.
+    """
+
+    def __str__(self):
+        return "French"
+
+    def __repr__(self):
+        return "French"
+
+
+class Japanese:
+    """
+    Japanese translation class.
+    """
+
+    def __str__(self):
+        return "Japanese"
+
+    def __repr__(self):
+        return "Japanese"
+
+
+class Thai:
+    """
+    Thai translation class.
+    """
+
+    def __str__(self):
+        return "Thai"
+
+    def __repr__(self):
+        return "Thai"

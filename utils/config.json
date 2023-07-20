@@ -1,0 +1,8 @@
+{
+  "language": "English",
+  "model": "Bittle",
+  "path": "./release",
+  "software_version": "2.0",
+  "board_version": "NyBoard_V1_2",
+  "mode": "Standard"
+}

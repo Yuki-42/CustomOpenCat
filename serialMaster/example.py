@@ -335,10 +335,9 @@ if __name__ == '__main__':
 #        schedulerToSkill(goodPorts, testSchedule) # compile the motion related instructions to a skill and send it to the robot.
         closeAllSerial(goodPorts)
         logger.info("finish!")
-        os._exit(0)
+        exit(0)
 
     except Exception as e:
         logger.info("Exception")
         closeAllSerial(goodPorts)
-        os._exit(0)
-        raise e
+        exit(e)

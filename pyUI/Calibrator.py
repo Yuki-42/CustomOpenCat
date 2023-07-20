@@ -4,13 +4,11 @@ from commonVar import *
 
 language = languageList['English']
 
-def txt(key):
-    return language.get(key, textEN[key])
-    
+
 class Calibrator:
-    def __init__(self,model,lan):
+    def __init__(self, model, lan):
         self.calibratorReady = False
-#        global goodPorts
+        #        global goodPorts
         connectPort(goodPorts)
         self.model = config.model_
         global language
@@ -27,20 +25,26 @@ class Calibrator:
             self.calibButtonW = 4
         self.frameCalibButtons = Frame(self.winCalib)
         self.frameCalibButtons.grid(row=0, column=3, rowspan=13)
-        calibButton = Button(self.frameCalibButtons, text=txt('Calibrate'), fg = 'blue', width=self.calibButtonW,command=lambda cmd='c': self.calibFun(cmd))
-        standButton = Button(self.frameCalibButtons, text=txt('Stand Up'), fg = 'blue', width=self.calibButtonW, command=lambda cmd='balance': self.calibFun(cmd))
-        restButton = Button(self.frameCalibButtons, text=txt('Rest'),fg = 'blue', width=self.calibButtonW, command=lambda cmd='d': self.calibFun(cmd))
-        walkButton = Button(self.frameCalibButtons, text=txt('Walk'),fg = 'blue', width=self.calibButtonW, command=lambda cmd='walk': self.calibFun(cmd))
-        saveButton = Button(self.frameCalibButtons, text=txt('Save'),fg = 'blue', width=self.calibButtonW, command=lambda: send(goodPorts, ['s', 0]))
-        abortButton = Button(self.frameCalibButtons, text=txt('Abort'),fg = 'blue', width=self.calibButtonW, command=lambda: send(goodPorts, ['a', 0]))
-#        quitButton = Button(self.frameCalibButtons, text=txt('Quit'),fg = 'blue', width=self.calibButtonW, command=self.closeCalib)
+        calibButton = Button(self.frameCalibButtons, text=txt('Calibrate'), fg='blue', width=self.calibButtonW,
+                             command=lambda cmd='c': self.calibFun(cmd))
+        standButton = Button(self.frameCalibButtons, text=txt('Stand Up'), fg='blue', width=self.calibButtonW,
+                             command=lambda cmd='balance': self.calibFun(cmd))
+        restButton = Button(self.frameCalibButtons, text=txt('Rest'), fg='blue', width=self.calibButtonW,
+                            command=lambda cmd='d': self.calibFun(cmd))
+        walkButton = Button(self.frameCalibButtons, text=txt('Walk'), fg='blue', width=self.calibButtonW,
+                            command=lambda cmd='walk': self.calibFun(cmd))
+        saveButton = Button(self.frameCalibButtons, text=txt('Save'), fg='blue', width=self.calibButtonW,
+                            command=lambda: send(goodPorts, ['s', 0]))
+        abortButton = Button(self.frameCalibButtons, text=txt('Abort'), fg='blue', width=self.calibButtonW,
+                             command=lambda: send(goodPorts, ['a', 0]))
+        #        quitButton = Button(self.frameCalibButtons, text=txt('Quit'),fg = 'blue', width=self.calibButtonW, command=self.closeCalib)
         calibButton.grid(row=6, column=0)
         restButton.grid(row=6, column=1)
         standButton.grid(row=6, column=2)
         walkButton.grid(row=11, column=0)
         saveButton.grid(row=11, column=1)
         abortButton.grid(row=11, column=2)
-#        quitButton.grid(row=11, column=2)
+        #        quitButton.grid(row=11, column=2)
 
         imageW = 250
         self.imgWiring = createImage(self.frameCalibButtons, resourcePath + self.model + 'Wire.jpeg', imageW)
@@ -103,7 +107,7 @@ class Calibrator:
             self.calibSliders.append(sliderBar)
             label.grid(row=ROW, column=COL, columnspan=cSPAN, pady=2, sticky=ALIGN)
             sliderBar.grid(row=ROW + 1, column=COL, rowspan=rSPAN, columnspan=cSPAN, sticky=ALIGN)
-        time.sleep(3) # wait for the robot to reboot
+        time.sleep(3)  # wait for the robot to reboot
         self.calibFun('c')
         self.winCalib.update()
         self.calibratorReady = True
@@ -111,7 +115,7 @@ class Calibrator:
         self.winCalib.mainloop()
 
     def calibFun(self, cmd):
-#        global ports
+        #        global ports
         imageW = 250
         self.imgPosture.destroy()
         if cmd == 'c':
@@ -119,8 +123,8 @@ class Calibrator:
             result = send(goodPorts, ['c', 0])
             if result != -1:
                 offsets = result[1]
-                printH('re',result)
-                printH('of',offsets)
+                printH('re', result)
+                printH('of', offsets)
                 idx = offsets.find(',')
                 l1 = offsets[:idx].split()[-1]
                 offsets = ''.join(offsets[idx + 1:].split()).split(',')[:15]
@@ -147,7 +151,7 @@ class Calibrator:
 
     def setCalib(self, idx, value):
         if self.calibratorReady:
-#            global ports
+            #            global ports
             value = int(value)
             send(goodPorts, ['c', [idx, value], 0])
 
@@ -155,7 +159,7 @@ class Calibrator:
         confirm = messagebox.askyesnocancel(title=None, message=txt('Do you want to save the offsets?'),
                                             default=messagebox.YES)
         if confirm is not None:
-#            global ports
+            #            global ports
             if confirm:
                 send(goodPorts, ['s', 0])
             else:
@@ -166,7 +170,8 @@ class Calibrator:
             self.winCalib.destroy()
             closeAllSerial(goodPorts)
             os._exit(0)
-            
+
+
 if __name__ == '__main__':
     goodPorts = {}
     try:
@@ -174,11 +179,10 @@ if __name__ == '__main__':
         #        if len(goodPorts)>0:
         #            t=threading.Thread(target=keepReadingSerial,args=(goodPorts,))
         #            t.start()
-        Calibrator(model,language)
+        Calibrator(model, language)
         closeAllSerial(goodPorts)
         os._exit(0)
     except Exception as e:
         logger.info("Exception")
         closeAllSerial(goodPorts)
         raise e
-

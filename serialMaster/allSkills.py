@@ -39,11 +39,10 @@ if __name__ == '__main__':
         
         closeAllSerial(goodPorts)
         logger.info("finish!")
-        os._exit(0)
+        exit(0)
 
     except Exception as e:
         logger.info("Exception")
         closeAllSerial(goodPorts)
-        os._exit(0)
-        print(e)
-        raise e
+        exit(e)
+

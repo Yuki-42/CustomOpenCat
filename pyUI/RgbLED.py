@@ -8,7 +8,7 @@ root = Tk()
 root.title('Eye Color Setter')
 root.geometry('+400+200')
 
-face = Frame(root).grid(row = 0,column = 0)
+Frame(root).grid(row = 0,column = 0)
 
 
 def change_color(i):

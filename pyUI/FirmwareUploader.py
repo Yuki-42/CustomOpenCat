@@ -8,6 +8,10 @@ The firmware uploader is a GUI program to upload firmware to the board.
 # Petoi LLC
 # May.1st, 2022
 
+# Rewritten by Kyle Pannan, 20th July 2023
+
+from utils import Translator, Config
+
 import pathlib
 import threading
 from subprocess import check_call
@@ -16,29 +20,20 @@ from tkinter import filedialog
 from tkinter import ttk
 
 from commonVar import *
-from misc import create_logger
+from utils.misc import create_logger
 from serialMaster.SerialCommunication import Communication
 from serialMaster.ardSerial import connectPort, goodPorts, closeAllSerial, keepCheckingPort, portStrList, model
 
-logger = create_logger("FirmwareUploader", "FirmwareUploader", "FirmwareUploader_")
-
-regularW = 14
 language = languageList['English']
 NyBoard_version_list = ['NyBoard_V1_0', 'NyBoard_V1_1', 'NyBoard_V1_2']
 BiBoard_version_list = ['BiBoard_V0']
-
-
-def txt(key):
-    """
-    Get the text in the language dictionary
-    """
-    return language.get(key, textEN[key])
 
 
 class Uploader:
     """
     The firmware uploader is a GUI program to upload firmware to the board.
     """
+
     def __init__(self, model, lan):
         connectPort(goodPorts, needTesting=False, needSendTask=False)
         closeAllSerial(goodPorts, clearPorts=False)
