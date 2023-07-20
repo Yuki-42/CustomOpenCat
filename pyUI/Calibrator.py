@@ -1,20 +1,32 @@
 #!/usr/bin/python3
 # -*- coding: UTF-8 -*-
-from commonVar import *
 
-language = languageList['English']
+# New imports
+from time import sleep
+from utils import create_logger, Translator, Config
+
+from commonVar import *
+from serialMaster.ardSerial import send, closeAllSerial
+from serialMaster.ardSerial import connectPort, printH
 
 
 class Calibrator:
-    def __init__(self, model, lan):
+    def __init__(self, translator: Translator, config: Config):
+        self.logger = create_logger("Calibrator", "CalibratorLogs", "Calibrator_")
+        self.logger.info("Initialising Calibrator")
+
+        self.translator: Translator = translator
+        self.config: Config = config
+        self.goodPorts = {}
+
         self.calibratorReady = False
-        #        global goodPorts
-        connectPort(goodPorts)
-        self.model = config.model_
-        global language
+        #        global self.goodPorts
+        connectPort(self.goodPorts)
+        self.model = config.model
+
         language = lan
         self.winCalib = Tk()
-        self.winCalib.title(txt('calibTitle'))
+        self.winCalib.title(self.translator.getTranslation(self.config.language, 'calibTitle'))
         self.winCalib.geometry('+200+100')
         self.winCalib.resizable(False, False)
         self.calibSliders = list()
@@ -25,19 +37,27 @@ class Calibrator:
             self.calibButtonW = 4
         self.frameCalibButtons = Frame(self.winCalib)
         self.frameCalibButtons.grid(row=0, column=3, rowspan=13)
-        calibButton = Button(self.frameCalibButtons, text=txt('Calibrate'), fg='blue', width=self.calibButtonW,
+        calibButton = Button(self.frameCalibButtons,
+                             text=self.translator.getTranslation(self.config.language, 'Calibrate'), fg='blue',
+                             width=self.calibButtonW,
                              command=lambda cmd='c': self.calibFun(cmd))
-        standButton = Button(self.frameCalibButtons, text=txt('Stand Up'), fg='blue', width=self.calibButtonW,
+        standButton = Button(self.frameCalibButtons,
+                             text=self.translator.getTranslation(self.config.language, 'Stand Up'), fg='blue',
+                             width=self.calibButtonW,
                              command=lambda cmd='balance': self.calibFun(cmd))
-        restButton = Button(self.frameCalibButtons, text=txt('Rest'), fg='blue', width=self.calibButtonW,
+        restButton = Button(self.frameCalibButtons, text=self.translator.getTranslation(self.config.language, 'Rest'),
+                            fg='blue', width=self.calibButtonW,
                             command=lambda cmd='d': self.calibFun(cmd))
-        walkButton = Button(self.frameCalibButtons, text=txt('Walk'), fg='blue', width=self.calibButtonW,
+        walkButton = Button(self.frameCalibButtons, text=self.translator.getTranslation(self.config.language, 'Walk'),
+                            fg='blue', width=self.calibButtonW,
                             command=lambda cmd='walk': self.calibFun(cmd))
-        saveButton = Button(self.frameCalibButtons, text=txt('Save'), fg='blue', width=self.calibButtonW,
-                            command=lambda: send(goodPorts, ['s', 0]))
-        abortButton = Button(self.frameCalibButtons, text=txt('Abort'), fg='blue', width=self.calibButtonW,
-                             command=lambda: send(goodPorts, ['a', 0]))
-        #        quitButton = Button(self.frameCalibButtons, text=txt('Quit'),fg = 'blue', width=self.calibButtonW, command=self.closeCalib)
+        saveButton = Button(self.frameCalibButtons, text=self.translator.getTranslation(self.config.language, 'Save'),
+                            fg='blue', width=self.calibButtonW,
+                            command=lambda: send(self.goodPorts, ['s', 0]))
+        abortButton = Button(self.frameCalibButtons, text=self.translator.getTranslation(self.config.language, 'Abort'),
+                             fg='blue', width=self.calibButtonW,
+                             command=lambda: send(self.goodPorts, ['a', 0]))
+        #        quitButton = Button(self.frameCalibButtons, text=self.translator.getTranslation(self.config.language, 'Quit'),fg = 'blue', width=self.calibButtonW, command=self.closeCalib)
         calibButton.grid(row=6, column=0)
         restButton.grid(row=6, column=1)
         standButton.grid(row=6, column=2)
@@ -49,7 +69,7 @@ class Calibrator:
         imageW = 250
         self.imgWiring = createImage(self.frameCalibButtons, resourcePath + self.model + 'Wire.jpeg', imageW)
         self.imgWiring.grid(row=0, column=0, rowspan=5, columnspan=3)
-        Hovertip(self.imgWiring, txt('tipImgWiring'))
+        Hovertip(self.imgWiring, self.translator.getTranslation(self.config.language, 'tipImgWiring'))
         self.imgPosture = createImage(self.frameCalibButtons, resourcePath + self.model + 'Ruler.jpeg', imageW)
         self.imgPosture.grid(row=7, column=0, rowspan=3, columnspan=3)
 
@@ -93,11 +113,12 @@ class Calibrator:
                 stt = NORMAL
                 clr = 'yellow'
             if i in range(8, 12):
-                sideLabel = txt(sideNames[i % 8]) + '\n'
+                sideLabel = self.translator.getTranslation(self.config.language, sideNames[i % 8]) + '\n'
             else:
                 sideLabel = ''
             label = Label(self.winCalib,
-                          text=sideLabel + '(' + str(i) + ')\n' + txt(scaleNames[i]))
+                          text=sideLabel + '(' + str(i) + ')\n' + self.translator.getTranslation(self.config.language,
+                                                                                                 scaleNames[i]))
 
             value = DoubleVar()
             sliderBar = Scale(self.winCalib, state=stt, fg='blue', bg=clr, variable=value, orient=ORI,
@@ -107,7 +128,7 @@ class Calibrator:
             self.calibSliders.append(sliderBar)
             label.grid(row=ROW, column=COL, columnspan=cSPAN, pady=2, sticky=ALIGN)
             sliderBar.grid(row=ROW + 1, column=COL, rowspan=rSPAN, columnspan=cSPAN, sticky=ALIGN)
-        time.sleep(3)  # wait for the robot to reboot
+        sleep(3)  # wait for the robot to reboot
         self.calibFun('c')
         self.winCalib.update()
         self.calibratorReady = True
@@ -120,7 +141,7 @@ class Calibrator:
         self.imgPosture.destroy()
         if cmd == 'c':
             self.imgPosture = createImage(self.frameCalibButtons, resourcePath + self.model + 'Ruler.jpeg', imageW)
-            result = send(goodPorts, ['c', 0])
+            result = send(self.goodPorts, ['c', 0])
             if result != -1:
                 offsets = result[1]
                 printH('re', result)
@@ -138,51 +159,36 @@ class Calibrator:
 
         elif cmd == 'd':
             self.imgPosture = createImage(self.frameCalibButtons, resourcePath + self.model + 'Rest.jpeg', imageW)
-            send(goodPorts, ['d', 0])
+            send(self.goodPorts, ['d', 0])
         elif cmd == 'balance':
             self.imgPosture = createImage(self.frameCalibButtons, resourcePath + self.model + 'Stand.jpeg', imageW)
-            send(goodPorts, ['kbalance', 0])
+            send(self.goodPorts, ['kbalance', 0])
         elif cmd == 'walk':
             self.imgPosture = createImage(self.frameCalibButtons, resourcePath + self.model + 'Walk.jpeg', imageW)
-            send(goodPorts, ['kwkF', 0])
+            send(self.goodPorts, ['kwkF', 0])
         self.imgPosture.grid(row=7, column=0, rowspan=3, columnspan=3)
-        Hovertip(self.imgPosture, txt('tipImgPosture'))
+        Hovertip(self.imgPosture, self.translator.getTranslation(self.config.language, 'tipImgPosture'))
         self.winCalib.update()
 
     def setCalib(self, idx, value):
         if self.calibratorReady:
             #            global ports
             value = int(value)
-            send(goodPorts, ['c', [idx, value], 0])
+            send(self.goodPorts, ['c', [idx, value], 0])
 
     def closeCalib(self):
-        confirm = messagebox.askyesnocancel(title=None, message=txt('Do you want to save the offsets?'),
+        confirm = messagebox.askyesnocancel(title=None, message=self.translator.getTranslation(self.config.language,
+                                                                                               'Do you want to save the offsets?'),
                                             default=messagebox.YES)
         if confirm is not None:
             #            global ports
             if confirm:
-                send(goodPorts, ['s', 0])
+                send(self.goodPorts, ['s', 0])
             else:
-                send(goodPorts, ['a', 0])
-            time.sleep(0.1)
+                send(self.goodPorts, ['a', 0])
+            sleep(0.1)
             self.calibratorReady = False
             self.calibSliders.clear()
             self.winCalib.destroy()
-            closeAllSerial(goodPorts)
+            closeAllSerial(self.goodPorts)
             os._exit(0)
-
-
-if __name__ == '__main__':
-    goodPorts = {}
-    try:
-        #        time.sleep(2)
-        #        if len(goodPorts)>0:
-        #            t=threading.Thread(target=keepReadingSerial,args=(goodPorts,))
-        #            t.start()
-        Calibrator(model, language)
-        closeAllSerial(goodPorts)
-        os._exit(0)
-    except Exception as e:
-        logger.info("Exception")
-        closeAllSerial(goodPorts)
-        raise e

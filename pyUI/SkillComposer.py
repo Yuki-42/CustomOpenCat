@@ -9,12 +9,12 @@
 
 # New imports
 from time import time, sleep
-
-
+from utils import Translator, create_logger, Config
+from FirmwareUploader import Uploader
+from datetime import datetime
+from serialMaster.ardSerial import connectPort, postureDict, keepCheckingPort, send, printH, closeAllSerial, model
 
 import sys
-
-from serialMaster.ardSerial import connectPort
 
 sys.path.append('../serialMaster/')
 import random
@@ -27,10 +27,9 @@ from commonVar import *
 import re
 from tkinter import ttk
 
-
-translator = Translator
-
-
+translator = Translator()
+config = Config()
+logger = create_logger("SkillComposer", "SkillComposer", "SkillComposer_", "DEBUG")
 
 
 def rgbtohex(r, g, b):
@@ -75,13 +74,18 @@ animalNames = [  # used for memorizing individual frames
     'ant', 'bat', 'bear', 'bee', 'bird', 'buffalo', 'cat', 'chicken', 'cow', 'dog', 'dolphin', 'duck', 'elephant',
     'fish', 'fox', 'frog', 'goose', 'goat', 'horse', 'kangaroo', 'lion', 'monkey', 'owl', 'ox', 'penguin', 'person',
     'pig', 'rabbit', 'sheep', 'tiger', 'whale', 'wolf', 'zebra']
-animalNames
 
 
 class SkillComposer:
-    def __init__(self, model, lan):
-        global language
-        language = lan
+    """
+    This class is the UI class for the SkillComposer.
+    """
+
+    def __init__(self, translator: Translator, config: Config):
+        self.logger = create_logger("SkillComposer", "SkillComposerLogs", "SkillComposer_", "DEBUG")
+        self.translator = translator
+        self.config = config
+
         connectPort(goodPorts)
         start = time()
         while config.model_ == '':
@@ -155,7 +159,7 @@ class SkillComposer:
 
         self.myFont = tkFont.Font(
             family='Times New Roman', size=20, weight='bold')
-        self.window.title(txt('skillComposerTitle'))
+        self.window.title(self.translator.getTranslation(self.config.language, 'skillComposerTitle'))
         self.totalFrame = 0
         self.activeFrame = 0
         self.frameList = list()
@@ -183,7 +187,7 @@ class SkillComposer:
                              args=(goodPorts, lambda: self.keepChecking, lambda: True, self.updatePortMenu,))
         t.daemon = True
         t.start()
-        time.sleep(2)
+        sleep(2)
         res = send(goodPorts, ['G', 0])
         printH("gyro status:", res)
         if res != -1 and res[0] == 'G':
@@ -198,21 +202,25 @@ class SkillComposer:
         file = Menu(self.menubar, tearoff=0, background='#ffcc99', foreground='black')
         for key in NaJoints:
             file.add_command(label=key, command=lambda model=key: self.changeModel(model))
-        self.menubar.add_cascade(label=txt('Model'), menu=file)
+        self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'Model'), menu=file)
 
         lan = Menu(self.menubar, tearoff=0)
-        for l in languageList:
-            lan.add_command(label=languageList[l]['lanOption'], command=lambda lanChoice=l: self.changeLan(lanChoice))
-        self.menubar.add_cascade(label=txt('lanMenu'), menu=lan)
+        for l in self.translator.languageList:
+            lan.add_command(label=self.translator.getTranslation(l, 'lanOption'),
+                            command=lambda lanChoice=l: self.changeLan(lanChoice))
+        self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'lanMenu'), menu=lan)
 
         util = Menu(self.menubar, tearoff=0)
-        util.add_command(label=txt('Eye color picker'), command=lambda: self.popEyeColor())
-        util.add_command(label=txt('Creator Information'), command=lambda: self.getCreatorInfo(True))
-        self.menubar.add_cascade(label=txt('Utility'), menu=util)
+        util.add_command(label=self.translator.getTranslation(self.config.language, 'Eye color picker'),
+                         command=lambda: self.popEyeColor())
+        util.add_command(label=self.translator.getTranslation(self.config.language, 'Creator Information'),
+                         command=lambda: self.getCreatorInfo(True))
+        self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'Utility'), menu=util)
 
         helpMenu = Menu(self.menubar, tearoff=0)
-        helpMenu.add_command(label=txt('About'), command=self.showAbout)
-        self.menubar.add_cascade(label=txt('Help'), menu=helpMenu)
+        helpMenu.add_command(label=self.translator.getTranslation(self.config.language, 'About'),
+                             command=self.showAbout)
+        self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'Help'), menu=helpMenu)
 
         self.window.config(menu=self.menubar)
 
@@ -221,15 +229,18 @@ class SkillComposer:
 
     def uploadFirmware(self):
         print('Uploader')
-        Uploader()
+        Uploader(self.translator, self.config)
 
     def createController(self):
         self.frameController = Frame(self.window)
         self.frameController.grid(row=0, column=0, rowspan=9, padx=(5, 10), pady=5)
-        label = Label(self.frameController, text=txt('Joint Controller'), font=self.myFont)
+        label = Label(self.frameController,
+                      text=self.translator.getTranslation(self.config.language, 'Joint Controller'), font=self.myFont)
         label.grid(row=0, column=0, columnspan=8)
         self.controllerLabels.append(label)
-        unbindButton = Button(self.frameController, text=txt('Unbind All'), fg='blue', command=self.unbindAll)
+        unbindButton = Button(self.frameController,
+                              text=self.translator.getTranslation(self.config.language, 'Unbind All'), fg='blue',
+                              command=self.unbindAll)
         unbindButton.grid(row=5, column=3, columnspan=2)
         self.controllerLabels.append(unbindButton)
 
@@ -273,11 +284,12 @@ class SkillComposer:
                 stt = NORMAL
                 clr = 'yellow'
             if i in range(8, 12):
-                sideLabel = txt(sideNames[i % 8]) + '\n'
+                sideLabel = self.translator.getTranslation(self.config.language, sideNames[i % 8]) + '\n'
             else:
                 sideLabel = ''
             label = Label(self.frameController,
-                          text=sideLabel + '(' + str(i) + ')\n' + txt(scaleNames[i]))
+                          text=sideLabel + '(' + str(i) + ')\n' + self.translator.getTranslation(self.config.language,
+                                                                                                 scaleNames[i]))
 
             value = DoubleVar()
             sliderBar = Scale(self.frameController, state=stt, fg='blue', bg=clr, variable=value, orient=ORI,
@@ -307,9 +319,9 @@ class SkillComposer:
                         button.grid(row=ROW + 2 + d * (rSPAN - 1), column=COL, sticky='ns'[d])
                     binderValue.set(0)
                     if d == 0:
-                        tip(button, txt('tipBinder'))
+                        tip(button, self.translator.getTranslation(self.config.language, 'tipBinder'))
                     else:
-                        tip(button, txt('tipRevBinder'))
+                        tip(button, self.translator.getTranslation(self.config.language, 'tipRevBinder'))
                     self.binderButton.append(button)
                 self.binderValue.append(binderValue)
 
@@ -334,7 +346,8 @@ class SkillComposer:
                 frm = -50
                 to2 = 40
 
-            label = Label(self.frameImu, text=txt(sixAxisNames[i]), width=self.sixW, height=2, fg='blue',
+            label = Label(self.frameImu, text=self.translator.getTranslation(self.config.language, sixAxisNames[i]),
+                          width=self.sixW, height=2, fg='blue',
                           bg='Light Blue')
 
             value = DoubleVar()
@@ -351,7 +364,8 @@ class SkillComposer:
     def createDial(self):
         self.frameDial = Frame(self.window)
         self.frameDial.grid(row=0, column=1)
-        labelDial = Label(self.frameDial, text=txt('State Dials'), font=self.myFont)
+        labelDial = Label(self.frameDial, text=self.translator.getTranslation(self.config.language, 'State Dials'),
+                          font=self.myFont)
         labelDial.grid(row=0, column=0, columnspan=5, pady=5)
         defaultValue = [1, 1, 0, 0]
         textColor = ['red', 'green']
@@ -374,26 +388,28 @@ class SkillComposer:
             else:
                 wth = self.dialW
             value = BooleanVar()
-            button = Checkbutton(self.frameDial, text=txt(key), indicator=0, width=wth, fg=textColor[defaultValue[i]],
+            button = Checkbutton(self.frameDial, text=self.translator.getTranslation(self.config.language, key),
+                                 indicator=0, width=wth, fg=textColor[defaultValue[i]],
                                  state=dialState,
                                  var=value, command=lambda idx=i: self.dial(idx))
             value.set(defaultValue[i])
             self.dialValue.append(value)
             button.grid(row=1, column=i + (i > 0), padx=self.dialPad)
-            tip(button, txt(tipDial[i]))
+            tip(button, self.translator.getTranslation(self.config.language, tipDial[i]))
 
         self.createPortMenu()
 
         self.newCmd = StringVar()
         entryCmd = Entry(self.frameDial, textvariable=self.newCmd)
         entryCmd.grid(row=2, column=0, columnspan=4, padx=3, sticky=E + W)
-        button = Button(self.frameDial, text=txt('Send'), fg='blue', width=self.dialW - 2, command=self.sendCmd)
+        button = Button(self.frameDial, text=self.translator.getTranslation(self.config.language, 'Send'), fg='blue',
+                        width=self.dialW - 2, command=self.sendCmd)
         button.grid(row=2, column=4, padx=3)
         entryCmd.bind('<Return>', self.sendCmd)
 
     def createPortMenu(self):
         self.port = StringVar()
-        self.options = [txt('None')]  # goodPorts.values())
+        self.options = [self.translator.getTranslation(self.config.language, 'None')]  # goodPorts.values())
         self.portMenu = OptionMenu(self.frameDial, self.port, *self.options)
 
         self.portMenu.config(width=self.portW, fg='blue')
@@ -401,7 +417,7 @@ class SkillComposer:
         self.portMenu.grid(row=1, column=1, padx=2)
         self.updatePortMenu()
 
-        tip(self.portMenu, txt('tipPortMenu'))
+        tip(self.portMenu, self.translator.getTranslation(self.config.language, 'tipPortMenu'))
 
     def updatePortMenu(self):
         print('***@@@ update menu function started')  # debug
@@ -411,21 +427,24 @@ class SkillComposer:
         stt = NORMAL
         #        self.dialValue[0].set(self.keepChecking)
         if len(self.options) == 0:
-            self.options.insert(0, txt('None'))
+            self.options.insert(0, self.translator.getTranslation(self.config.language, 'None'))
             stt = DISABLED
             if self.keepChecking:
                 self.dialValue[0].set(True)
-                self.frameDial.winfo_children()[1].config(text=txt('Listening'), fg='orange')
+                self.frameDial.winfo_children()[1].config(
+                    text=self.translator.getTranslation(self.config.language, 'Listening'), fg='orange')
             else:
-                self.frameDial.winfo_children()[1].config(text=txt('Connect'), fg='red')
+                self.frameDial.winfo_children()[1].config(
+                    text=self.translator.getTranslation(self.config.language, 'Connect'), fg='red')
         else:
             #            global currentModel
             #            if currentModel != model:
             #                self.changeModel(currentModel)# doesn't work yet
             if len(self.options) > 1:
-                self.options.insert(0, txt('All'))
+                self.options.insert(0, self.translator.getTranslation(self.config.language, 'All'))
             if self.keepChecking:
-                self.frameDial.winfo_children()[1].config(text=txt('Connected'), fg='green')
+                self.frameDial.winfo_children()[1].config(
+                    text=self.translator.getTranslation(self.config.language, 'Connected'), fg='green')
         for string in self.options:
             menu.add_command(label=string, command=lambda p=string: self.port.set(p))
         self.port.set(self.options[0])
@@ -448,9 +467,9 @@ class SkillComposer:
                 b.config(state=NORMAL)
 
         inv_dict = {v: k for k, v in goodPorts.items()}
-        if self.port.get() == txt('All'):
+        if self.port.get() == self.translator.getTranslation(self.config.language, 'All'):
             ports = goodPorts
-        elif self.port.get() == txt('None'):
+        elif self.port.get() == self.translator.getTranslation(self.config.language, 'None'):
             ports = []
         else:
             singlePort = inv_dict[self.port.get()]
@@ -459,7 +478,8 @@ class SkillComposer:
     def createPosture(self):
         self.framePosture = Frame(self.window)
         self.framePosture.grid(row=1, column=1)
-        labelPosture = Label(self.framePosture, text=txt('Postures'), font=self.myFont)
+        labelPosture = Label(self.framePosture, text=self.translator.getTranslation(self.config.language, 'Postures'),
+                             font=self.myFont)
         labelPosture.grid(row=0, column=0, columnspan=4)
         i = 0
         for pose in self.postureTable:
@@ -472,61 +492,76 @@ class SkillComposer:
         self.frameSkillEditor = Frame(self.window)
         self.frameSkillEditor.grid(row=2, column=1)
 
-        labelSkillEditor = Label(self.frameSkillEditor, text=txt('Skill Editor'), font=self.myFont)
+        labelSkillEditor = Label(self.frameSkillEditor,
+                                 text=self.translator.getTranslation(self.config.language, 'Skill Editor'),
+                                 font=self.myFont)
         labelSkillEditor.grid(row=0, column=0, columnspan=4)
         pd = 3
-        self.buttonPlay = Button(self.frameSkillEditor, text=txt('Play'), width=self.buttonW, fg='green',
+        self.buttonPlay = Button(self.frameSkillEditor,
+                                 text=self.translator.getTranslation(self.config.language, 'Play'), width=self.buttonW,
+                                 fg='green',
                                  command=self.playThread)
         self.buttonPlay.grid(row=1, column=0, padx=pd)
 
-        tip(self.buttonPlay, txt('tipPlay'))
+        tip(self.buttonPlay, self.translator.getTranslation(self.config.language, 'tipPlay'))
 
-        buttonImp = Button(self.frameSkillEditor, text=txt('Import'), width=self.buttonW, fg='blue',
+        buttonImp = Button(self.frameSkillEditor, text=self.translator.getTranslation(self.config.language, 'Import'),
+                           width=self.buttonW, fg='blue',
                            command=self.popImport)
         buttonImp.grid(row=1, column=1, padx=pd)
 
-        tip(buttonImp, txt('tipImport'))
+        tip(buttonImp, self.translator.getTranslation(self.config.language, 'tipImport'))
 
-        buttonRestart = Button(self.frameSkillEditor, text=txt('Restart'), width=self.buttonW, fg='red',
+        buttonRestart = Button(self.frameSkillEditor,
+                               text=self.translator.getTranslation(self.config.language, 'Restart'), width=self.buttonW,
+                               fg='red',
                                command=self.restartSkillEditor)
         buttonRestart.grid(row=1, column=2, padx=pd)
 
-        tip(buttonRestart, txt('tipRestart'))
+        tip(buttonRestart, self.translator.getTranslation(self.config.language, 'tipRestart'))
 
-        buttonExp = Button(self.frameSkillEditor, text=txt('Export'), width=self.buttonW, fg='blue',
+        buttonExp = Button(self.frameSkillEditor, text=self.translator.getTranslation(self.config.language, 'Export'),
+                           width=self.buttonW, fg='blue',
                            command=self.export)
         buttonExp.grid(row=1, column=3, padx=pd)
 
-        tip(buttonExp, txt('tipExport'))
+        tip(buttonExp, self.translator.getTranslation(self.config.language, 'tipExport'))
 
-        buttonUndo = Button(self.frameSkillEditor, text=txt('Undo'), width=self.buttonW, fg='blue', state=DISABLED,
+        buttonUndo = Button(self.frameSkillEditor, text=self.translator.getTranslation(self.config.language, 'Undo'),
+                            width=self.buttonW, fg='blue', state=DISABLED,
                             command=self.restartSkillEditor)
         buttonUndo.grid(row=2, column=0, padx=pd)
 
-        buttonRedo = Button(self.frameSkillEditor, text=txt('Redo'), width=self.buttonW, fg='blue', state=DISABLED,
+        buttonRedo = Button(self.frameSkillEditor, text=self.translator.getTranslation(self.config.language, 'Redo'),
+                            width=self.buttonW, fg='blue', state=DISABLED,
                             command=self.restartSkillEditor)
         buttonRedo.grid(row=2, column=1, padx=pd)
 
-        cbMiroX = Checkbutton(self.frameSkillEditor, text=txt('mirror'), indicator=0, width=self.MirrorW,
+        cbMiroX = Checkbutton(self.frameSkillEditor,
+                              text=self.translator.getTranslation(self.config.language, 'mirror'), indicator=0,
+                              width=self.MirrorW,
                               fg='blue', variable=self.mirror, onvalue=True, offvalue=False,
                               command=self.setMirror)
         cbMiroX.grid(row=2, column=2, sticky='e', padx=pd)
 
-        tip(cbMiroX, txt('tipMirrorXport'))
+        tip(cbMiroX, self.translator.getTranslation(self.config.language, 'tipMirrorXport'))
 
-        buttonMirror = Button(self.frameSkillEditor, text=txt('>|<'), width=self.mirrorW, fg='blue',
+        buttonMirror = Button(self.frameSkillEditor, text=self.translator.getTranslation(self.config.language, '>|<'),
+                              width=self.mirrorW, fg='blue',
                               command=self.generateMirrorFrame)
         buttonMirror.grid(row=2, column=2, sticky='w', padx=pd)
 
-        tip(buttonMirror, txt('tipMirror'))
+        tip(buttonMirror, self.translator.getTranslation(self.config.language, 'tipMirror'))
 
         self.gaitOrBehavior = StringVar()
-        self.GorB = OptionMenu(self.frameSkillEditor, self.gaitOrBehavior, txt('Gait'), txt('Behavior'))
+        self.GorB = OptionMenu(self.frameSkillEditor, self.gaitOrBehavior,
+                               self.translator.getTranslation(self.config.language, 'Gait'),
+                               self.translator.getTranslation(self.config.language, 'Behavior'))
         self.GorB.config(width=6, fg='blue')
-        self.gaitOrBehavior.set(txt('Behavior'))
+        self.gaitOrBehavior.set(self.translator.getTranslation(self.config.language, 'Behavior'))
         self.GorB.grid(row=2, column=3, padx=pd)
 
-        tip(self.GorB, txt('tipGorB'))
+        tip(self.GorB, self.translator.getTranslation(self.config.language, 'tipGorB'))
 
     def setMirror(self):
         self.mirror = not self.mirror
@@ -539,14 +574,15 @@ class SkillComposer:
         self.loopRepeat = Entry(self.frameRowScheduler, width=self.frameItemWidth[cLoop], textvariable=self.vRepeat)
         self.loopRepeat.grid(row=0, column=cLoop)
 
-        tip(self.loopRepeat, txt('tipRepeat'))
+        tip(self.loopRepeat, self.translator.getTranslation(self.config.language, 'tipRepeat'))
 
         for i in range(1, len(labelSkillEditorHeader)):
-            label = Label(self.frameRowScheduler, text=txt(labelSkillEditorHeader[i]),
+            label = Label(self.frameRowScheduler,
+                          text=self.translator.getTranslation(self.config.language, labelSkillEditorHeader[i]),
                           width=self.frameItemWidth[i] + self.headerOffset[i])
             label.grid(row=0, column=i, sticky='w')
             if tipSkillEditor[i]:
-                tip(label, txt(tipSkillEditor[i]))
+                tip(label, self.translator.getTranslation(self.config.language, tipSkillEditor[i]))
 
         canvas = Canvas(self.frameRowScheduler, width=self.canvasW, height=310, bd=0)
         scrollbar = Scrollbar(self.frameRowScheduler, orient='vertical', cursor='double_arrow', troughcolor='yellow',
@@ -581,28 +617,33 @@ class SkillComposer:
 
     def changeLan(self, l):
         global language
-        if self.ready and txt('lan') != l:
+        if self.ready and self.translator.getTranslation(self.config.language, 'lan') != l:
             global triggerAxis
-            inv_triggerAxis = {txt(v): k for k, v in triggerAxis.items()}
-            language = languageList[l]
-            self.window.title(txt('skillComposerTitle'))
+            inv_triggerAxis = {self.translator.getTranslation(self.config.language, v): k for k, v in
+                               triggerAxis.items()}
+            self.window.title(self.translator.getTranslation(self.config.language, 'skillComposerTitle'))
             self.menubar.destroy()
-            self.controllerLabels[0].config(text=txt('Joint Controller'))
-            self.controllerLabels[1].config(text=txt('Unbind All'))
+            self.controllerLabels[0].config(
+                text=self.translator.getTranslation(self.config.language, 'Joint Controller'))
+            self.controllerLabels[1].config(text=self.translator.getTranslation(self.config.language, 'Unbind All'))
             for i in range(6):
-                self.controllerLabels[2 + 16 + i].config(text=txt(sixAxisNames[i]))
+                self.controllerLabels[2 + 16 + i].config(
+                    text=self.translator.getTranslation(self.config.language, sixAxisNames[i]))
             for i in range(16):
                 if i in range(8, 12):
-                    sideLabel = txt(sideNames[i % 8]) + '\n'
+                    sideLabel = self.translator.getTranslation(self.config.language, sideNames[i % 8]) + '\n'
                 else:
                     sideLabel = '\n'
-                self.controllerLabels[2 + i].config(text=sideLabel + '(' + str(i) + ')\n' + txt(scaleNames[i]))
+                self.controllerLabels[2 + i].config(
+                    text=sideLabel + '(' + str(i) + ')\n' + self.translator.getTranslation(self.config.language,
+                                                                                           scaleNames[i]))
 
                 for d in range(2):
                     if d == 0:
-                        tip(self.binderButton[i * 2], txt('tipBinder'))
+                        tip(self.binderButton[i * 2], self.translator.getTranslation(self.config.language, 'tipBinder'))
                     else:
-                        tip(self.binderButton[i * 2 + 1], txt('tipRevBinder'))
+                        tip(self.binderButton[i * 2 + 1],
+                            self.translator.getTranslation(self.config.language, 'tipRevBinder'))
 
             self.frameDial.destroy()
             self.framePosture.destroy()
@@ -613,32 +654,37 @@ class SkillComposer:
             self.createSkillEditor()
             for i in range(len(labelSkillEditorHeader)):
                 if i > 0:
-                    self.frameRowScheduler.winfo_children()[i].config(text=txt(labelSkillEditorHeader[i]))
+                    self.frameRowScheduler.winfo_children()[i].config(
+                        text=self.translator.getTranslation(self.config.language, labelSkillEditorHeader[i]))
                 if tipSkillEditor[i]:
-                    tip(self.frameRowScheduler.winfo_children()[i], txt(tipSkillEditor[i]))
+                    tip(self.frameRowScheduler.winfo_children()[i],
+                        self.translator.getTranslation(self.config.language, tipSkillEditor[i]))
             for r in range(len(self.frameList)):
-                tip(self.getWidget(r, cLoop), txt('tipLoop'))
-                tt = '='  # +txt('Set')
+                tip(self.getWidget(r, cLoop), self.translator.getTranslation(self.config.language, 'tipLoop'))
+                tt = '='  # +self.translator.getTranslation(self.config.language, 'Set')
                 ft = 'sans 12'
                 if self.activeFrame == r:
                     ft = 'sans 14 bold'
                     if self.frameList[r][2] != self.frameData:
-                        tt = '!'  # + txt('Save')
+                        tt = '!'  # + self.translator.getTranslation(self.config.language, 'Save')
                         self.getWidget(r, cSet).config(fg='red')
                 self.getWidget(r, cSet).config(text=tt, font=ft)
 
                 step = self.getWidget(r, cStep).get()
-                self.getWidget(r, cStep).config(values=('1', '2', '4', '8', '12', '16', '32', '48', '64', txt('max')))
+                self.getWidget(r, cStep).config(values=('1', '2', '4', '8', '12', '16', '32', '48', '64',
+                                                        self.translator.getTranslation(self.config.language, 'max')))
                 self.getWidget(r, cStep).delete(0, END)
                 if step.isnumeric():
                     self.getWidget(r, cStep).insert(0, step)
                 else:
-                    self.getWidget(r, cStep).insert(0, txt('max'))
+                    self.getWidget(r, cStep).insert(0, self.translator.getTranslation(self.config.language, 'max'))
 
                 vTrig = self.getWidget(r, cTrig).get()
-                self.getWidget(r, cTrig).config(values=list(map(lambda x: txt(x), triggerAxis.values())))
+                self.getWidget(r, cTrig).config(values=list(
+                    map(lambda x: self.translator.getTranslation(self.config.language, x), triggerAxis.values())))
                 self.getWidget(r, cTrig).delete(0, END)
-                self.getWidget(r, cTrig).insert(0, txt(triggerAxis[inv_triggerAxis[vTrig]]))
+                self.getWidget(r, cTrig).insert(0, self.translator.getTranslation(self.config.language,
+                                                                                  triggerAxis[inv_triggerAxis[vTrig]]))
 
     def showAbout(self):
         messagebox.showinfo('Petoi Controller UI',
@@ -673,23 +719,25 @@ class SkillComposer:
                                 indicator=0, width=self.frameItemWidth[cLoop],
                                 command=lambda idx=currentRow: self.setCheckBox(idx))
         loopCheck.grid(row=0, column=cLoop)
-        tip(loopCheck, txt('tipLoop'))
+        tip(loopCheck, self.translator.getTranslation(self.config.language, 'tipLoop'))
         #        rowLabel = Label(singleFrame, text = str(currentRow), width = self.frameItemWidth[cLabel])
         #        rowLabel.grid(row=0, column=cLabel)
 
-        setButton = Button(singleFrame, text='=',  # +txt('Set')
+        setButton = Button(singleFrame, text='=',  # +self.translator.getTranslation(self.config.language, 'Set')
                            font='sans 14 bold', fg='blue',  # width=self.frameItemWidth[cSet],
                            command=lambda idx=currentRow: self.setFrame(idx))
 
         vStep = StringVar()
         Spinbox(singleFrame, width=self.frameItemWidth[cStep],
-                values=('1', '2', '4', '8', '12', '16', '32', '48', '64', txt('max')), textvariable=vStep,
+                values=('1', '2', '4', '8', '12', '16', '32', '48', '64',
+                        self.translator.getTranslation(self.config.language, 'max')), textvariable=vStep,
                 wrap=True).grid(
             row=0, column=cStep)
 
         vTrig = StringVar()
         spTrig = Spinbox(singleFrame, width=self.frameItemWidth[cTrig],
-                         values=list(map(lambda x: txt(x), triggerAxis.values())),
+                         values=list(map(lambda x: self.translator.getTranslation(self.config.language, x),
+                                         triggerAxis.values())),
                          textvariable=vTrig, wrap=True)
         spTrig.grid(row=0, column=cTrig)
 
@@ -782,11 +830,13 @@ class SkillComposer:
 
     def changeButtonState(self, currentRow):
         if self.totalFrame > 0:
-            self.getWidget(currentRow, cSet).config(text='=',  # +txt('Set')
+            self.getWidget(currentRow, cSet).config(text='=',
+                                                    # +self.translator.getTranslation(self.config.language, 'Set')
                                                     font='sans 14 bold', fg='blue')
             if currentRow != self.activeFrame:
                 if 0 <= self.activeFrame < self.totalFrame:
-                    self.getWidget(self.activeFrame, cSet).config(text='=',  # +txt('Set')
+                    self.getWidget(self.activeFrame, cSet).config(text='=',
+                                                                  # +self.translator.getTranslation(self.config.language, 'Set')
                                                                   font='sans 12', fg='blue')
                 self.activeFrame = currentRow
             self.originalAngle[0] = 0
@@ -826,7 +876,8 @@ class SkillComposer:
             #                frame[2][4+i] = self.frameData[4+i]
             frame[2][4:] = copy.deepcopy(self.frameData[4:])
 
-            self.getWidget(currentRow, cSet).config(text='=',  # +txt('Set')
+            self.getWidget(currentRow, cSet).config(text='=',
+                                                    # +self.translator.getTranslation(self.config.language, 'Set')
                                                     font='sans 14 bold', fg='blue')
         if self.totalFrame == 1:
             self.activeFrame = 0
@@ -870,7 +921,7 @@ class SkillComposer:
             loopFrom, loopTo, repeat = skillData[4:7]
             self.vRepeat.set(repeat)
             copyFrom = 4
-            self.gaitOrBehavior.set(txt('Behavior'))
+            self.gaitOrBehavior.set(self.translator.getTranslation(self.config.language, 'Behavior'))
         else:
             header = 4
             if skillData[0] == 1:  # posture
@@ -883,7 +934,7 @@ class SkillComposer:
                 else:
                     frameSize = 12
                     copyFrom = 8
-            self.gaitOrBehavior.set(txt('Gait'))
+            self.gaitOrBehavior.set(self.translator.getTranslation(self.config.language, 'Gait'))
         if (len(skillData) - header) % abs(skillData[0]) != 0 or frameSize != (len(skillData) - header) // abs(
                 skillData[0]):
             messagebox.showwarning(title='Warning', message='Wrong format!')
@@ -911,7 +962,7 @@ class SkillComposer:
                 #                    print(self.getWidget(f, cLoop).get())
                 self.getWidget(f, cStep).delete(0, END)
                 if frame[2][20] == 0:
-                    self.getWidget(f, cStep).insert(0, txt('max'))
+                    self.getWidget(f, cStep).insert(0, self.translator.getTranslation(self.config.language, 'max'))
                 else:
                     self.getWidget(f, cStep).insert(0, frame[2][20])
                 self.getWidget(f, cDelay).delete(0, END)
@@ -924,7 +975,7 @@ class SkillComposer:
 
             else:
                 self.getWidget(f, cStep).delete(0, END)
-                self.getWidget(f, cStep).insert(0, txt('max'))
+                self.getWidget(f, cStep).insert(0, self.translator.getTranslation(self.config.language, 'max'))
             self.activeFrame = f
         if self.totalFrame == 1:
             self.activeFrame = -1
@@ -940,7 +991,7 @@ class SkillComposer:
             loopFrom, loopTo, repeat = skillData[4:7]
             self.vRepeat.set(repeat)
             copyFrom = 4
-            self.gaitOrBehavior.set(txt('Behavior'))
+            self.gaitOrBehavior.set(self.translator.getTranslation(self.config.language, 'Behavior'))
         else:
             header = 4
             if skillData[0] == 1:  # posture
@@ -953,7 +1004,7 @@ class SkillComposer:
                 else:
                     frameSize = 12
                     copyFrom = 8
-            self.gaitOrBehavior.set(txt('Gait'))
+            self.gaitOrBehavior.set(self.translator.getTranslation(self.config.language, 'Gait'))
         if (len(skillData) - header) % abs(skillData[0]) != 0 or frameSize != (len(skillData) - header) // abs(
                 skillData[0]):
             messagebox.showwarning(title='Warning', message='Wrong format!')
@@ -980,7 +1031,7 @@ class SkillComposer:
                 #                    print(self.getWidget(f, cLoop).get())
                 self.getWidget(f, cStep).delete(0, END)
                 if frame[2][20] == 0:
-                    self.getWidget(f, cStep).insert(0, txt('max'))
+                    self.getWidget(f, cStep).insert(0, self.translator.getTranslation(self.config.language, 'max'))
                 else:
                     self.getWidget(f, cStep).insert(0, frame[2][20])
                 self.getWidget(f, cDelay).delete(0, END)
@@ -988,12 +1039,13 @@ class SkillComposer:
 
                 self.getWidget(f, cTrig).delete(0, END)
                 self.getWidget(f, cAngle).delete(0, END)
-                self.getWidget(f, cTrig).insert(0, txt(triggerAxis[frame[2][22]]))
+                self.getWidget(f, cTrig).insert(0, self.translator.getTranslation(self.config.language,
+                                                                                  triggerAxis[frame[2][22]]))
                 self.getWidget(f, cAngle).insert(0, frame[2][23])
 
             else:
                 self.getWidget(f, cStep).delete(0, END)
-                self.getWidget(f, cStep).insert(0, txt('max'))
+                self.getWidget(f, cStep).insert(0, self.translator.getTranslation(self.config.language, 'max'))
             self.activeFrame = f
         if self.totalFrame == 1:
             self.activeFrame = -1
@@ -1036,18 +1088,18 @@ class SkillComposer:
             print(self.skillN)
             top.destroy()
             self.comboTop = Toplevel(self.window)
-            self.comboTop.title(txt("Skill List"))
-            typeLabel = Label(self.comboTop, text=txt("Type of skill"))
+            self.comboTop.title(self.translator.getTranslation(self.config.language, "Skill List"))
+            typeLabel = Label(self.comboTop, text=self.translator.getTranslation(self.config.language, "Type of skill"))
             typeLabel.grid(row=1, column=0)
-            nameLabel = Label(self.comboTop, text=txt("Name of skill"))
+            nameLabel = Label(self.comboTop, text=self.translator.getTranslation(self.config.language, "Name of skill"))
             nameLabel.grid(row=1, column=1)
             values = []
             if len(self.skillN[0]):
-                values.append(txt("Posture"))
+                values.append(self.translator.getTranslation(self.config.language, "Posture"))
             if len(self.skillN[1]):
-                values.append(txt("Gait"))
+                values.append(self.translator.getTranslation(self.config.language, "Gait"))
             if len(self.skillN[2]):
-                values.append(txt("Behavior"))
+                values.append(self.translator.getTranslation(self.config.language, "Behavior"))
             self.typeComb = ttk.Combobox(self.comboTop, values=values, state='readonly')
             self.typeComb.grid(row=2, column=0)
             self.nameComb = ttk.Combobox(self.comboTop, values=[])
@@ -1056,9 +1108,9 @@ class SkillComposer:
             def selectTy(event):
                 V = self.typeComb.get()
                 self.nameComb.set('')
-                if V == txt("Posture"):
+                if V == self.translator.getTranslation(self.config.language, "Posture"):
                     self.nameComb['values'] = self.skillN[0]
-                elif V == txt("Gait"):
+                elif V == self.translator.getTranslation(self.config.language, "Gait"):
                     self.nameComb['values'] = self.skillN[1]
                 else:
                     self.nameComb['values'] = self.skillN[2]
@@ -1072,9 +1124,11 @@ class SkillComposer:
                 self.loadSkill(self.skills[self.skillDic[v]])
 
             self.typeComb.bind('<<ComboboxSelected>>', selectTy)
-            Button(self.comboTop, text=txt('Cancel'), width=10, command=lambda: self.closePop(self.comboTop)).grid(
+            Button(self.comboTop, text=self.translator.getTranslation(self.config.language, 'Cancel'), width=10,
+                   command=lambda: self.closePop(self.comboTop)).grid(
                 row=3, column=1)
-            Button(self.comboTop, text=txt('OK'), width=10, command=select).grid(row=3, column=0)
+            Button(self.comboTop, text=self.translator.getTranslation(self.config.language, 'OK'), width=10,
+                   command=select).grid(row=3, column=0)
 
     def popImport(self):
         # Create a Toplevel window
@@ -1084,7 +1138,7 @@ class SkillComposer:
         entryFrame = Frame(top)
         entryFrame.grid(row=1, column=0, columnspan=4, padx=10, pady=10)
         self.skillText = Text(entryFrame, width=120, spacing1=2)
-        self.skillText.insert('1.0', txt('exampleFormat')
+        self.skillText.insert('1.0', self.translator.getTranslation(self.config.language, 'exampleFormat')
                               + '\n\nconst int8_t hi[] PROGMEM ={\n\
             -5,  0,   0, 1,\n\
              1,  2,   3,\n\
@@ -1096,12 +1150,16 @@ class SkillComposer:
         };')
         self.skillText.grid(row=0, column=0)
         # Create an Entry Widget in the Toplevel window
-        Button(top, text=txt('Open File'), width=10, command=lambda: self.openFile(top)).grid(row=0, column=0)
-        Button(top, text=txt('Clear'), width=10, command=self.clearSkillText).grid(row=0, column=1)
+        Button(top, text=self.translator.getTranslation(self.config.language, 'Open File'), width=10,
+               command=lambda: self.openFile(top)).grid(row=0, column=0)
+        Button(top, text=self.translator.getTranslation(self.config.language, 'Clear'), width=10,
+               command=self.clearSkillText).grid(row=0, column=1)
         # Create a Button Widget in the Toplevel Window
-        Button(top, text=txt('Cancel'), width=10, command=lambda: self.closePop(top)).grid(row=0, column=2)
-        #        Button(top, text=txt('OK'), width=10, command=lambda: self.loadSkillDataText(top)).grid(row=0, column=3)
-        Button(top, text=txt('OK'), width=10, command=lambda: self.loadSkillDataTextMul(top)).grid(row=0, column=3)
+        Button(top, text=self.translator.getTranslation(self.config.language, 'Cancel'), width=10,
+               command=lambda: self.closePop(top)).grid(row=0, column=2)
+        #        Button(top, text=self.translator.getTranslation(self.config.language, 'OK'), width=10, command=lambda: self.loadSkillDataText(top)).grid(row=0, column=3)
+        Button(top, text=self.translator.getTranslation(self.config.language, 'OK'), width=10,
+               command=lambda: self.loadSkillDataTextMul(top)).grid(row=0, column=3)
         scrollY = Scrollbar(entryFrame, width=20, orient=VERTICAL)
         scrollY.grid(row=0, column=1, sticky='ns')
         scrollY.config(command=self.skillText.yview)
@@ -1206,19 +1264,23 @@ class SkillComposer:
         else:
             wValue = 3
         for e in range(len(effectDictionary)):
-            Button(btnsEff, text=txt(list(effectDictionary.keys())[e]), width=wValue,
+            Button(btnsEff, text=self.translator.getTranslation(self.config.language, list(effectDictionary.keys())[e]),
+                   width=wValue,
                    command=lambda eff=list(effectDictionary.values())[e]: self.changeEffect(eff)).grid(row=0, column=e)
-        Button(btnsEff, text=txt('Meow'), width=wValue, command=lambda: send(ports, ['u', 0])).grid(row=0, column=3)
+        Button(btnsEff, text=self.translator.getTranslation(self.config.language, 'Meow'), width=wValue,
+               command=lambda: send(ports, ['u', 0])).grid(row=0, column=3)
 
     def playThread(self):
         self.playStop = False
-        self.buttonPlay.config(text=txt('Stop'), fg='red', command=self.stop)
+        self.buttonPlay.config(text=self.translator.getTranslation(self.config.language, 'Stop'), fg='red',
+                               command=self.stop)
         t = threading.Thread(target=self.play)
         t.start()
 
     def play(self):
         if self.activeFrame + 1 == self.totalFrame:
-            self.getWidget(self.activeFrame, cSet).config(text='=',  # +txt('Set')
+            self.getWidget(self.activeFrame, cSet).config(text='=',
+                                                          # +self.translator.getTranslation(self.config.language, 'Set')
                                                           font='sans 12')
             self.activeFrame = 0
         for f in range(self.activeFrame, self.totalFrame):
@@ -1227,11 +1289,13 @@ class SkillComposer:
 
             self.transformToFrame(f)
 
-        self.buttonPlay.config(text=txt('Play'), fg='green', command=self.playThread)
+        self.buttonPlay.config(text=self.translator.getTranslation(self.config.language, 'Play'), fg='green',
+                               command=self.playThread)
         self.playStop = False
 
     def stop(self):
-        self.buttonPlay.config(text=txt('Play'), fg='green', command=self.playThread)
+        self.buttonPlay.config(text=self.translator.getTranslation(self.config.language, 'Play'), fg='green',
+                               command=self.playThread)
         self.playStop = True
 
     def mirrorAngles(self, singleFrame):
@@ -1256,7 +1320,7 @@ class SkillComposer:
 
     def popCreator(self, configuration):
         self.creatorWin = Toplevel(self.window)
-        self.creatorWin.title(txt("Creator Information"))
+        self.creatorWin.title(self.translator.getTranslation(self.config.language, "Creator Information"))
         self.creatorWin.geometry('216x110+500+400')
         self.config = configuration
 
@@ -1271,18 +1335,18 @@ class SkillComposer:
             self.creator.set(lines[6])
             self.location.set(lines[7])
         else:
-            self.creator.set(txt('Nature'))
-            self.location.set(txt('Earth'))
+            self.creator.set(self.translator.getTranslation(self.config.language, 'Nature'))
+            self.location.set(self.translator.getTranslation(self.config.language, 'Earth'))
 
         # creator label and entry
-        creator_label = Label(fmCreInfo, text=txt('Creator'))
+        creator_label = Label(fmCreInfo, text=self.translator.getTranslation(self.config.language, 'Creator'))
         creator_label.grid(row=0, column=0, padx=2, pady=6, sticky=W)
         self.creator_entry = Entry(fmCreInfo, textvariable=self.creator, font=('Arial', 10), foreground='blue',
                                    background='white')
         self.creator_entry.grid(row=0, column=1, padx=2, pady=6, sticky=W)
 
         # location label and entry
-        location_label = Label(fmCreInfo, text=txt('Location'))
+        location_label = Label(fmCreInfo, text=self.translator.getTranslation(self.config.language, 'Location'))
         location_label.grid(row=1, column=0, padx=2, pady=3, sticky=W)
         self.location_entry = Entry(fmCreInfo, textvariable=self.location, font=('Arial', 10), foreground='blue',
                                     background='white')
@@ -1292,7 +1356,8 @@ class SkillComposer:
         fmCreInfo.columnconfigure(1, weight=3)  # set column width
 
         # saveID button
-        saveID_button = Button(fmCreInfo, text=txt('Save'), command=self.saveID)
+        saveID_button = Button(fmCreInfo, text=self.translator.getTranslation(self.config.language, 'Save'),
+                               command=self.saveID)
         saveID_button.grid(row=2, columnspan=2, padx=3, pady=6, sticky=W + E)
 
         self.creatorWin.protocol('WM_DELETE_WINDOW', self.saveID)
@@ -1301,14 +1366,16 @@ class SkillComposer:
         creatorValue = self.creator_entry.get()
         locationValue = self.location_entry.get()
         if creatorValue == '':
-            messagebox.showwarning(txt('Warning'), txt('InputCreator'))
+            messagebox.showwarning(self.translator.getTranslation(self.config.language, 'Warning'),
+                                   self.translator.getTranslation(self.config.language, 'InputCreator'))
             self.creator_entry.focus()  # force the entry to get focus
             return False
         else:
             self.creator.set(creatorValue)
 
         if locationValue == '':
-            messagebox.showwarning(txt('Warning'), txt('InputLocation'))
+            messagebox.showwarning(self.translator.getTranslation(self.config.language, 'Warning'),
+                                   self.translator.getTranslation(self.config.language, 'InputLocation'))
             self.location_entry.focus()  # force the entry to get focus
             return False
         else:
@@ -1382,7 +1449,8 @@ class SkillComposer:
         file = asksaveasfile(filetypes=files, defaultextension=files)
 
         if self.activeFrame + 1 == self.totalFrame:
-            self.getWidget(self.activeFrame, cSet).config(text='=',  # +txt('Set')
+            self.getWidget(self.activeFrame, cSet).config(text='=',
+                                                          # +self.translator.getTranslation(self.config.language, 'Set')
                                                           font='sans 12')
             self.window.update()
             self.activeFrame = 0
@@ -1395,7 +1463,7 @@ class SkillComposer:
         else:
             copyFrom = 8
             frameSize = 12
-        if self.gaitOrBehavior.get() == txt('Behavior'):
+        if self.gaitOrBehavior.get() == self.translator.getTranslation(self.config.language, 'Behavior'):
             period = -period
             copyFrom = 4
             frameSize = 20
@@ -1405,7 +1473,7 @@ class SkillComposer:
             frameSize = 16
         angleRatio = 1
         startFrame = self.activeFrame
-        inv_triggerAxis = {txt(v): k for k, v in triggerAxis.items()}
+        inv_triggerAxis = {self.translator.getTranslation(self.config.language, v): k for k, v in triggerAxis.items()}
         for f in range(startFrame, self.totalFrame):
             frame = self.frameList[f]
             self.frameData = copy.deepcopy(frame[2])
@@ -1413,7 +1481,8 @@ class SkillComposer:
                 angleRatio = 2
             if self.frameData[3] == 1:
                 loopStructure.append(f - startFrame)
-            if self.getWidget(f, cStep).get() == txt('max') or int(self.getWidget(f, cStep).get()) > 127:
+            if self.getWidget(f, cStep).get() == self.translator.getTranslation(self.config.language, 'max') or int(
+                    self.getWidget(f, cStep).get()) > 127:
                 self.frameData[20] = 0
             else:
                 self.frameData[20] = int(self.getWidget(f, cStep).get())
@@ -1448,7 +1517,7 @@ class SkillComposer:
 
         print('{')
         print('{:>4},{:>4},{:>4},{:>4},'.format(*[period, 0, 0, angleRatio]))
-        if period < 0 and self.gaitOrBehavior.get() == txt('Behavior'):
+        if period < 0 and self.gaitOrBehavior.get() == self.translator.getTranslation(self.config.language, 'Behavior'):
             print('{:>4},{:>4},{:>4},'.format(*[loopStructure[0], loopStructure[-1], self.loopRepeat.get()]))
         for row in skillData:
             print(('{:>4},' * frameSize).format(*row))
@@ -1456,7 +1525,7 @@ class SkillComposer:
 
         if file:
             print(file.name)
-            x = datetime.datetime.now()
+            x = datetime.now()
             fileData = '# ' + file.name.split('/')[-1].split('.')[0] + '\n'
             fileData += 'Note: ' + 'You may add a short description/instruction here.\n\n'
             fileData += 'Model: ' + self.model + '\n\n'
@@ -1466,7 +1535,8 @@ class SkillComposer:
             fileData += '# [Demo](www.youtube.com) You can modify the link in the round brackets\n\n'
             fileData += '# Token\nK\n\n'
             fileData += '# Data\n{\n' + '{:>4},{:>4},{:>4},{:>4},\n'.format(*[period, 0, 0, angleRatio])
-            if period < 0 and self.gaitOrBehavior.get() == txt('Behavior'):
+            if period < 0 and self.gaitOrBehavior.get() == self.translator.getTranslation(self.config.language,
+                                                                                          'Behavior'):
                 fileData += '{:>4},{:>4},{:>4},\n'.format(*[loopStructure[0], loopStructure[-1], self.loopRepeat.get()])
             logger.debug(f"skillData: {skillData}")
             for row in skillData:
@@ -1480,7 +1550,7 @@ class SkillComposer:
                 time.sleep(0.1)
                 f.close()
 
-        if self.gaitOrBehavior.get() == txt('Behavior'):
+        if self.gaitOrBehavior.get() == self.translator.getTranslation(self.config.language, 'Behavior'):
             skillData.insert(0, [loopStructure[0], loopStructure[-1], int(self.loopRepeat.get())])
         skillData.insert(0, [period, 0, 0, angleRatio])
         flat_list = [item for sublist in skillData for item in sublist]
@@ -1508,12 +1578,14 @@ class SkillComposer:
     def indicateEdit(self):
         frame = self.frameList[self.activeFrame]
         if frame[2] != self.frameData:
-            self.getWidget(self.activeFrame, cSet).config(text='!'  # + txt('Save')
+            self.getWidget(self.activeFrame, cSet).config(text='!'
+                                                          # + self.translator.getTranslation(self.config.language, 'Save')
                                                           , font='sans 14 bold', fg='red')
         #            print('frm',frame[2])
         #            print('dat',self.frameData)
         else:
-            self.getWidget(self.activeFrame, cSet).config(text='=',  # +txt('Set')
+            self.getWidget(self.activeFrame, cSet).config(text='=',
+                                                          # +self.translator.getTranslation(self.config.language, 'Set')
                                                           font='sans 14 bold', fg='blue')
 
     def setCheckBox(self, currentRow):
@@ -1739,7 +1811,8 @@ class SkillComposer:
                     # self.portMenu.config(state = DISABLED)
                     # self.updatePortMenu()
                     self.keepChecking = False
-                    self.frameDial.winfo_children()[1].config(text=txt('Connect'), fg='red')
+                    self.frameDial.winfo_children()[1].config(
+                        text=self.translator.getTranslation(self.config.language, 'Connect'), fg='red')
                     self.dialValue[0].set(False)
                     # for b in buttons:
                     #     b.config(state = DISABLED)
@@ -1755,16 +1828,18 @@ class SkillComposer:
 
                     self.keepChecking = True
                     t = threading.Thread(target=keepCheckingPort, args=(
-                    goodPorts, lambda: self.keepChecking, lambda: True, self.updatePortMenu,))
+                        goodPorts, lambda: self.keepChecking, lambda: True, self.updatePortMenu,))
                     t.daemon = True
                     t.start()
                     send(ports, ['b', [10, 90], 0])
                     if len(goodPorts) > 0:
-                        self.frameDial.winfo_children()[1].config(text=txt('Connected'), fg='green')
+                        self.frameDial.winfo_children()[1].config(
+                            text=self.translator.getTranslation(self.config.language, 'Connected'), fg='green')
                         # for b in buttons:
                         #     b.config(state = NORMAL)
                     else:
-                        self.frameDial.winfo_children()[1].config(text=txt('Listening'), fg='orange')
+                        self.frameDial.winfo_children()[1].config(
+                            text=self.translator.getTranslation(self.config.language, 'Listening'), fg='orange')
                 # self.frameDial.winfo_children()[1].update()
                 self.updatePortMenu()
             elif len(goodPorts) > 0:
@@ -1797,7 +1872,8 @@ class SkillComposer:
                         self.frameDial.winfo_children()[4].select()
 
     def on_closing(self):
-        if messagebox.askokcancel(txt('Quit'), txt('Do you want to quit?')):
+        if messagebox.askokcancel(self.translator.getTranslation(self.config.language, 'Quit'),
+                                  self.translator.getTranslation(self.config.language, 'Do you want to quit?')):
             self.keepChecking = False  # close the background thread for checking serial port
             self.window.destroy()
             closeAllSerial(goodPorts)

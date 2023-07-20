@@ -3,7 +3,6 @@
 
 # modified from https://blog.csdn.net/u013541325/article/details/113062191
 
-import binascii
 import serial  # need to install pyserial first
 import serial.tools.list_ports
 

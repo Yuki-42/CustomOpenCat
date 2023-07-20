@@ -24,7 +24,6 @@ from utils.misc import create_logger
 from serialMaster.SerialCommunication import Communication
 from serialMaster.ardSerial import connectPort, goodPorts, closeAllSerial, keepCheckingPort, portStrList, model
 
-language = languageList['English']
 NyBoard_version_list = ['NyBoard_V1_0', 'NyBoard_V1_1', 'NyBoard_V1_2']
 BiBoard_version_list = ['BiBoard_V0']
 
@@ -34,7 +33,18 @@ class Uploader:
     The firmware uploader is a GUI program to upload firmware to the board.
     """
 
-    def __init__(self, model, lan):
+    def __init__(self, translator: Translator, config: Config):
+        self.logger = create_logger("FirmwareUploader", "FirmwareUploaderLogs", "FirmwareUploader")
+
+        self.logger.info("Initialising Uploader")
+
+        self.logger.debug("Assigning variables")
+        self.translator = translator
+        self.config = config
+        self.logger.debug("Variables assigned")
+
+
+
         connectPort(goodPorts, needTesting=False, needSendTask=False)
         closeAllSerial(goodPorts, clearPorts=False)
         self.win = Tk()
@@ -54,14 +64,14 @@ class Uploader:
         Grid.rowconfigure(self.win, 0, weight=1)
         Grid.columnconfigure(self.win, 0, weight=1)
         self.strProduct = StringVar()
-        global language
-        language = lan
-        self.BittleNyBoardModes = list(map(lambda x: txt(x), ['Standard', 'RandomMind', 'Voice', 'Camera', 'Mind+']))
+
+        self.BittleNyBoardModes = list(map(lambda x: self.translator.getTranslation(self.config.language, x), ['Standard', 'RandomMind', 'Voice', 'Camera', 'Mind+']))
         self.NybbleNyBoardModes = list(
-            map(lambda x: txt(x), ['Standard', 'RandomMind', 'Voice', 'Ultrasonic', 'RandomMind_Ultrasonic', 'Mind+']))
-        self.BittleBiBoardModes = list(map(lambda x: txt(x), ['Standard']))
-        self.NybbleBiBoardModes = list(map(lambda x: txt(x), ['Standard']))
-        self.inv_txt = {v: k for k, v in language.items()}
+            map(lambda x: self.translator.getTranslation(self.config.language, x), ['Standard', 'RandomMind', 'Voice', 'Ultrasonic', 'RandomMind_Ultrasonic', 'Mind+']))
+        self.BittleBiBoardModes = list(map(lambda x: self.translator.getTranslation(self.config.language, x), ['Standard']))
+        self.NybbleBiBoardModes = list(map(lambda x: self.translator.getTranslation(self.config.language, x), ['Standard']))
+
+        self.inv_txt = {v: k for k, v in self.translator.languageList[self.config.language]}  # Da fuck is this
         self.initWidgets()
 
         self.win.protocol('WM_DELETE_WINDOW', self.on_closing)
@@ -83,11 +93,11 @@ class Uploader:
             self.win.iconbitmap(r'./resources/Petoi.ico')
 
         self.helpMenu = Menu(self.menuBar, tearoff=0)
-        self.helpMenu.add_command(label=txt('labAbout'), command=self.about)
-        self.menuBar.add_cascade(label=txt('labHelp'), menu=self.helpMenu)
+        self.helpMenu.add_command(label=self.translator.getTranslation(self.config.language, 'labAbout'), command=self.about)
+        self.menuBar.add_cascade(label=self.translator.getTranslation(self.config.language, 'labHelp'), menu=self.helpMenu)
 
     def initWidgets(self):
-        self.win.title(txt('uploaderTitle'))
+        self.win.title(self.translator.getTranslation(self.config.language, 'uploaderTitle'))
         self.buildMenu()
         self.strFileDir = StringVar()
         self.strPort = StringVar()
@@ -130,20 +140,20 @@ class Uploader:
             self.configuration = [self.defaultLan, model, strDefaultPath, strSwVersion, strBdVersion, mode]
 
         num = len(lines)
-        logger.debug(f"len(lines): {num}")
+        self.logger.debug(f"len(lines): {num}")
         self.lastSetting = [model, strDefaultPath, strSwVersion, strBdVersion, mode]
         self.currentSetting = []
 
-        logger.info(f"The firmware file folder is {strDefaultPath}")
+        self.logger.info(f"The firmware file folder is {strDefaultPath}")
         self.strFileDir.set(strDefaultPath)
 
         fmFileDir = ttk.Frame(self.win)
         fmFileDir.grid(row=0, columnspan=3, ipadx=2, padx=2, sticky=W + E + N + S)
 
-        self.labFileDir = Label(fmFileDir, text=txt('labFileDir'), font=('Arial', 16))
+        self.labFileDir = Label(fmFileDir, text=self.translator.getTranslation(self.config.language, 'labFileDir'), font=('Arial', 16))
         self.labFileDir.grid(row=0, column=0, ipadx=2, padx=2, sticky=W)
 
-        self.btnFileDir = Button(fmFileDir, text=txt('btnFileDir'), font=('Arial', 12), foreground='blue',
+        self.btnFileDir = Button(fmFileDir, text=self.translator.getTranslation(self.config.language, 'btnFileDir'), font=('Arial', 12), foreground='blue',
                                  background=self.backgroundColor, command=self.open_dir)  # bind open_dir function
         self.btnFileDir.grid(row=0, column=1, ipadx=5, padx=5, pady=5, sticky=E)
 
@@ -157,7 +167,7 @@ class Uploader:
 
         fmProduct = ttk.Frame(self.win)
         fmProduct.grid(row=1, column=0, ipadx=2, padx=2, sticky=W)
-        self.labProduct = ttk.Label(fmProduct, text=txt('labProduct'), font=('Arial', 16))
+        self.labProduct = ttk.Label(fmProduct, text=self.translator.getTranslation(self.config.language, 'labProduct'), font=('Arial', 16))
         self.labProduct.grid(row=0, column=0, ipadx=5, padx=5, sticky=W)
 
         cbProduct = ttk.Combobox(fmProduct, textvariable=self.strProduct, foreground='blue', font=12)
@@ -172,7 +182,7 @@ class Uploader:
 
         fmSoftwareVersion = ttk.Frame(self.win)
         fmSoftwareVersion.grid(row=1, column=1, ipadx=2, padx=2, sticky=W)
-        self.labSoftwareVersion = ttk.Label(fmSoftwareVersion, text=txt('labSoftwareVersion'), font=('Arial', 16))
+        self.labSoftwareVersion = ttk.Label(fmSoftwareVersion, text=self.translator.getTranslation(self.config.language, 'labSoftwareVersion'), font=('Arial', 16))
         self.labSoftwareVersion.grid(row=0, ipadx=5, padx=5, sticky=W)
         self.cbSoftwareVersion = ttk.Combobox(fmSoftwareVersion, textvariable=self.strSoftwareVersion,
                                               foreground='blue', font=12)
@@ -189,7 +199,7 @@ class Uploader:
 
         fmBoardVersion = ttk.Frame(self.win)
         fmBoardVersion.grid(row=1, column=2, ipadx=2, padx=2, sticky=W)
-        self.labBoardVersion = ttk.Label(fmBoardVersion, text=txt('labBoardVersion'), font=('Arial', 16))
+        self.labBoardVersion = ttk.Label(fmBoardVersion, text=self.translator.getTranslation(self.config.language, 'labBoardVersion'), font=('Arial', 16))
         self.labBoardVersion.grid(row=0, ipadx=5, padx=5, sticky=W)
 
         self.cbBoardVersion = ttk.Combobox(fmBoardVersion, textvariable=self.strBoardVersion, foreground='blue',
@@ -205,7 +215,7 @@ class Uploader:
 
         fmMode = ttk.Frame(self.win)
         fmMode.grid(row=2, column=0, ipadx=2, padx=2, pady=6, sticky=W)
-        self.labMode = ttk.Label(fmMode, text=txt('labMode'), font=('Arial', 16))
+        self.labMode = ttk.Label(fmMode, text=self.translator.getTranslation(self.config.language, 'labMode'), font=('Arial', 16))
         self.labMode.grid(row=0, column=0, ipadx=5, padx=5, sticky=W)
 
         if self.strProduct.get() == 'Bittle':
@@ -220,14 +230,14 @@ class Uploader:
                 cbModeList = self.NybbleBiBoardModes
         self.cbMode = ttk.Combobox(fmMode, textvariable=self.strMode, foreground='blue', font=12)
         # set default value of Combobox
-        self.cbMode.set(txt(self.lastSetting[4]))
+        self.cbMode.set(self.translator.getTranslation(self.config.language, self.lastSetting[4]))
         # set list for Combobox
         self.cbMode['values'] = cbModeList
         self.cbMode.grid(row=1, ipadx=5, padx=5, sticky=W)
 
         fmSerial = ttk.Frame(self.win)  # relief=GROOVE
         fmSerial.grid(row=2, column=1, ipadx=2, padx=2, pady=6, sticky=W)
-        self.labPort = ttk.Label(fmSerial, text=txt('labPort'), font=('Arial', 16))
+        self.labPort = ttk.Label(fmSerial, text=self.translator.getTranslation(self.config.language, 'labPort'), font=('Arial', 16))
         self.labPort.grid(row=0, ipadx=5, padx=5, sticky=W)
         self.cbPort = ttk.Combobox(fmSerial, textvariable=self.strPort, foreground='blue', font=12)  # width=38,
         # list of serial port number
@@ -236,12 +246,12 @@ class Uploader:
             port_number_list = [' ']
             print("Cannot find the serial port!")
         else:
-            logger.info(f"portStrList is {portStrList}")
+            self.logger.info(f"portStrList is {portStrList}")
             for p in portStrList:
                 portName = p
-                logger.debug(f"portName is {portName}")
+                self.logger.debug(f"portName is {portName}")
                 port_number_list.append(portName)
-            logger.debug(f"port_number_list is {port_number_list}")
+            self.logger.debug(f"port_number_list is {port_number_list}")
             self.cbPort.set(port_number_list[0])
         # set list for Combobox
         self.cbPort['values'] = port_number_list
@@ -249,23 +259,23 @@ class Uploader:
 
         fmFacReset = ttk.Frame(self.win)  # relief=GROOVE
         fmFacReset.grid(row=2, column=2, ipadx=2, padx=2, pady=6, sticky=W + E)
-        self.btnFacReset = Button(fmFacReset, text=txt('btnFacReset'), font=('Arial', 16, 'bold'), fg='red',
+        self.btnFacReset = Button(fmFacReset, text=self.translator.getTranslation(self.config.language, 'btnFacReset'), font=('Arial', 16, 'bold'), fg='red',
                                   relief='groove', command=self.factoryReset)
         self.btnFacReset.grid(row=0, ipadx=5, ipady=5, padx=9, pady=8, sticky=W + E + N + S)
-        tip(self.btnFacReset, txt('tipFacReset'))
+        tip(self.btnFacReset, self.translator.getTranslation(self.config.language, 'tipFacReset'))
         fmFacReset.columnconfigure(0, weight=1)
         fmFacReset.rowconfigure(0, weight=1)
 
         fmUpload = ttk.Frame(self.win)
         fmUpload.grid(row=3, columnspan=3, ipadx=2, padx=2, pady=8, sticky=W + E + N + S)
-        self.btnUpgrade = Button(fmUpload, text=txt('btnUpgrade'), font=('Arial', 16, 'bold'), foreground='blue',
+        self.btnUpgrade = Button(fmUpload, text=self.translator.getTranslation(self.config.language, 'btnUpgrade'), font=('Arial', 16, 'bold'), foreground='blue',
                                  background=self.backgroundColor, relief='groove', command=self.upgrade)
         self.btnUpgrade.grid(row=0, column=0, ipadx=5, padx=5, pady=5, sticky=W + E)
-        tip(self.btnUpgrade, txt('tipUpgrade'))
-        self.btnUpdateMode = Button(fmUpload, text=txt('btnUpdateMode'), font=('Arial', 16, 'bold'), foreground='blue',
+        tip(self.btnUpgrade, self.translator.getTranslation(self.config.language, 'tipUpgrade'))
+        self.btnUpdateMode = Button(fmUpload, text=self.translator.getTranslation(self.config.language, 'btnUpdateMode'), font=('Arial', 16, 'bold'), foreground='blue',
                                     background=self.backgroundColor, relief='groove', command=self.uploadeModeOnly)
         self.btnUpdateMode.grid(row=0, column=1, ipadx=5, padx=5, pady=5, sticky=W + E)
-        tip(self.btnUpdateMode, txt('tipUpdateMode'))
+        tip(self.btnUpdateMode, self.translator.getTranslation(self.config.language, 'tipUpdateMode'))
         fmUpload.columnconfigure(0, weight=1)
         fmUpload.columnconfigure(1, weight=1)
         fmUpload.rowconfigure(0, weight=1)
@@ -297,24 +307,24 @@ class Uploader:
             port_number_list = [' ']
             print("Cannot find the serial port!")
         else:
-            logger.info(f"portStrList is {portStrList}")
+            self.logger.info(f"portStrList is {portStrList}")
             for p in portStrList:
                 portName = p
-                logger.debug(f"{portName}")
+                self.logger.debug(f"{portName}")
                 port_number_list.append(portName)
-            logger.debug(f"port_number_list is {port_number_list}")
+            self.logger.debug(f"port_number_list is {port_number_list}")
         self.cbPort.set(port_number_list[0])
         # set list for Combobox
         self.cbPort['values'] = port_number_list
 
     def about(self):
-        self.msgbox = messagebox.showinfo(txt('titleVersion'), txt('msgVersion'))
+        self.msgbox = messagebox.showinfo(self.translator.getTranslation(self.config.language, 'titleVersion'), self.translator.getTranslation(self.config.language, 'msgVersion'))
         self.force_focus()
 
     def setActiveMode(self):
         if self.strSoftwareVersion.get() == '1.0':
             stt = DISABLED
-            self.strMode.set(txt('Standard'))
+            self.strMode.set(self.translator.getTranslation(self.config.language, 'Standard'))
             board_version_list = NyBoard_version_list
             self.strBoardVersion.set(board_version_list[-1])
         else:
@@ -357,7 +367,7 @@ class Uploader:
         self.cbMode['values'] = modeList
 
         if self.strMode.get() not in modeList:
-            messagebox.showwarning(txt('Warning'), txt('msgMode'))
+            messagebox.showwarning(self.translator.getTranslation(self.config.language, 'Warning'), self.translator.getTranslation(self.config.language, 'msgMode'))
             # printH("modeList[0]:", modeList[0])
             self.strMode.set(modeList[0])
             self.force_focus()  # force the main interface to get focus
@@ -379,12 +389,12 @@ class Uploader:
 
     def open_dir(self):
         # call askdirectory to open file director
-        logger.debug(f"{self.strFileDir.get()}")
+        self.logger.debug(f"{self.strFileDir.get()}")
         if (self.strFileDir.get()).find(releasePath) != -1:
             initDir = releasePath
         else:
             initDir = self.strFileDir
-        dirpath = filedialog.askdirectory(title=txt('titleFileDir'), initialdir=initDir)
+        dirpath = filedialog.askdirectory(title=self.translator.getTranslation(self.config.language, 'titleFileDir'), initialdir=initDir)
 
         if dirpath:
             self.formalize(dirpath)
@@ -398,22 +408,22 @@ class Uploader:
 
     def WriteInstinctPrompts(self, port):
         ser = Communication(port, 115200, 0.5)
-        logger.info(f"Connect to usb serial port: {port}.")
+        self.logger.info(f"Connect to usb serial port: {port}.")
         strSoftwareVersion = self.strSoftwareVersion.get()
         promptJointCalib = {
-            'message': txt('reset joints?'),
-            'operating': txt('resetting joints'),
-            'result': txt('joints reset'),
+            'message': self.translator.getTranslation(self.config.language, 'reset joints?'),
+            'operating': self.translator.getTranslation(self.config.language, 'resetting joints'),
+            'result': self.translator.getTranslation(self.config.language, 'joints reset'),
         }
         promptInstinct = {
-            'message': txt('update instincts?'),
-            'operating': txt('updating instincts'),
-            'result': txt('instincts updated')
+            'message': self.translator.getTranslation(self.config.language, 'update instincts?'),
+            'operating': self.translator.getTranslation(self.config.language, 'updating instincts'),
+            'result': self.translator.getTranslation(self.config.language, 'instincts updated')
         }
         promptIMU = {
-            'message': txt('calibrate IMU?'),
-            'operating': txt('calibrating IMU'),
-            'result': txt('IMU calibrated')
+            'message': self.translator.getTranslation(self.config.language, 'calibrate IMU?'),
+            'operating': self.translator.getTranslation(self.config.language, 'calibrating IMU'),
+            'result': self.translator.getTranslation(self.config.language, 'IMU calibrated')
         }
         if strSoftwareVersion == '1.0':
             promptList = [promptJointCalib, promptInstinct, promptIMU]
@@ -431,7 +441,7 @@ class Uploader:
             if ser.main_engine.in_waiting > 0:
                 x = str(ser.main_engine.readline())
                 prompStr = x[2:-1]
-                logger.debug(f"new line:{x}")
+                self.logger.debug(f"new line:{x}")
                 if x != "":
                     print(x[2:-1])
                     questionMark = "Y/n"
@@ -448,7 +458,7 @@ class Uploader:
                         if progress > 0 and retMsg == True:
                             self.strStatus.set(promptList[progress - 1]['result'])
                             self.statusBar.update()
-                        retMsg = messagebox.askyesno(txt('Warning'), prompt['message'])
+                        retMsg = messagebox.askyesno(self.translator.getTranslation(self.config.language, 'Warning'), prompt['message'])
                         if retMsg:
                             self.strStatus.set(prompt['operating'])
                             self.statusBar.update()
@@ -470,7 +480,7 @@ class Uploader:
                             if strBoardVersion in BiBoard_version_list:  # for BiBoard it need to be modified later
                                 break
                         elif x.find("Calibrated:") != -1:
-                            self.strStatus.set(txt('9685 Calibrated'))
+                            self.strStatus.set(self.translator.getTranslation(self.config.language, '9685 Calibrated'))
                             self.statusBar.update()
                             break
             else:
@@ -481,7 +491,7 @@ class Uploader:
                             break
 
         ser.Close_Engine()
-        logger.info("close the serial port.")
+        self.logger.info("close the serial port.")
         self.force_focus()
 
     def saveConfigToFile(self, filename):
@@ -498,17 +508,17 @@ class Uploader:
             f.close()
 
     def autoupload(self):
-        logger.info(f"lastSetting: {self.lastSetting}.")
+        self.logger.info(f"lastSetting: {self.lastSetting}.")
         strProd = self.strProduct.get()
         strDefaultPath = self.strFileDir.get()
         strSoftwareVersion = self.strSoftwareVersion.get()
         strBoardVersion = self.strBoardVersion.get()
         strMode = self.inv_txt[self.strMode.get()]
         self.currentSetting = [strProd, strDefaultPath, strSoftwareVersion, strBoardVersion, strMode]
-        logger.info(f"currentSetting: {self.currentSetting}.")
+        self.logger.info(f"currentSetting: {self.currentSetting}.")
 
         if self.strFileDir.get() == '' or self.strFileDir.get() == ' ':
-            messagebox.showwarning(txt('Warning'), txt('msgFileDir'))
+            messagebox.showwarning(self.translator.getTranslation(self.config.language, 'Warning'), self.translator.getTranslation(self.config.language, 'msgFileDir'))
             self.force_focus()  # force the main interface to get focus
             return False
 
@@ -526,7 +536,7 @@ class Uploader:
             port = self.strPort.get()
         print(self.strPort.get())
         if port == ' ' or port == '':
-            messagebox.showwarning(txt('Warning'), txt('msgPort'))
+            messagebox.showwarning(self.translator.getTranslation(self.config.language, 'Warning'), self.translator.getTranslation(self.config.language, 'msgPort'))
             self.force_focus()
             return False
 
@@ -545,10 +555,10 @@ class Uploader:
                 # if s == 0 and self.bParaUploaded and self.currentSetting[:4] == self.lastSetting[:4]:
                 if s == 0 and (not self.bParaUpload):
                     continue
-                self.strStatus.set(txt('Uploading') + txt(uploadStage[s]) + '...')
+                self.strStatus.set(self.translator.getTranslation(self.config.language, 'Uploading') + self.translator.getTranslation(self.config.language, uploadStage[s]) + '...')
                 self.win.update()
                 # self.inProgress = True
-                # status = txt('Uploading') + txt(uploadStage[s]) + '.'
+                # status = self.translator.getTranslation(self.config.language, 'Uploading') + self.translator.getTranslation(self.config.language, uploadStage[s]) + '.'
                 # t = threading.Thread(target=self.progressiveDots, args=(status,))
                 # t.start()
                 if self.OSname == 'win32':
@@ -557,7 +567,7 @@ class Uploader:
                     avrdudePath = '/usr/bin/'
                     path = pathlib.Path(avrdudePath + 'avrdude')
                     if not path.exists():
-                        messagebox.showwarning(txt('Warning'), txt('msgNoneAvrdude'))
+                        messagebox.showwarning(self.translator.getTranslation(self.config.language, 'Warning'), self.translator.getTranslation(self.config.language, 'msgNoneAvrdude'))
                         self.force_focus()  # force the main interface to get focus
                         return False
                     # avrdudeconfPath = '/etc/avrdude/'      # Fedora / CentOS
@@ -576,13 +586,13 @@ class Uploader:
                             (port, filename[s]), shell=self.shellOption)
                 # self.inProgress = False
                 except:
-                    status = txt(uploadStage[s]) + txt('failed to upload')
+                    status = self.translator.getTranslation(self.config.language, uploadStage[s]) + self.translator.getTranslation(self.config.language, 'failed to upload')
                     self.strStatus.set(status)
                     self.statusBar.update()
-                    messagebox.showwarning(txt('Warning'), txt('Replug prompt'))
+                    messagebox.showwarning(self.translator.getTranslation(self.config.language, 'Warning'), self.translator.getTranslation(self.config.language, 'Replug prompt'))
                     return False
                 else:
-                    status = txt(uploadStage[s]) + txt('is successully uploaded')
+                    status = self.translator.getTranslation(self.config.language, uploadStage[s]) + self.translator.getTranslation(self.config.language, 'is successully uploaded')
 
                 self.strStatus.set(status)
                 self.statusBar.update()
@@ -590,7 +600,7 @@ class Uploader:
                 if s == 0:
                     self.WriteInstinctPrompts(port)
                     if not self.bFacReset:
-                        messagebox.showinfo(title=None, message=txt('parameterFinish'))
+                        messagebox.showinfo(title=None, message=self.translator.getTranslation(self.config.language, 'parameterFinish'))
                     else:
                         pass
                 else:
@@ -606,7 +616,7 @@ class Uploader:
 
             filename = [fnBootLoader, fnPartitions, fnBootApp, fnMainFunc]
             print(filename)
-            self.strStatus.set(txt('Uploading') + txt('Main function') + '...')
+            self.strStatus.set(self.translator.getTranslation(self.config.language, 'Uploading') + self.translator.getTranslation(self.config.language, 'Main function') + '...')
             self.win.update()
             if self.OSname == 'win32':
                 esptoolPath = './resources/esptoolWin/'
@@ -618,12 +628,12 @@ class Uploader:
                     esptoolPath + 'esptool --chip esp32 --port %s --baud 921600 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 80m --flash_size 16MB 0x1000 %s 0x8000 %s 0xe000 %s 0x10000 %s' % \
                     (port, filename[0], filename[1], filename[2], filename[3]), shell=self.shellOption)
             except:
-                status = txt('Main function') + txt('failed to upload')
+                status = self.translator.getTranslation(self.config.language, 'Main function') + self.translator.getTranslation(self.config.language, 'failed to upload')
                 self.strStatus.set(status)
                 self.statusBar.update()
                 return False
             else:
-                status = txt('Main function') + txt('is successully uploaded')
+                status = self.translator.getTranslation(self.config.language, 'Main function') + self.translator.getTranslation(self.config.language, 'is successully uploaded')
 
             self.strStatus.set(status)
             self.statusBar.update()
@@ -631,11 +641,11 @@ class Uploader:
 
         self.lastSetting = self.currentSetting
         if self.bFacReset:
-            self.strMode.set(txt('Standard'))
+            self.strMode.set(self.translator.getTranslation(self.config.language, 'Standard'))
         self.saveConfigToFile(defaultConfPath)
 
         print('Finish!')
-        messagebox.showinfo(title=None, message=txt('msgFinish'))
+        messagebox.showinfo(title=None, message=self.translator.getTranslation(self.config.language, 'msgFinish'))
         self.force_focus()  # force the main interface to get focus
         return True
 
@@ -643,10 +653,7 @@ class Uploader:
         self.win.after(1, lambda: self.win.focus_force())
 
     def on_closing(self):
-        if messagebox.askokcancel(txt('Quit'), txt('Do you want to quit?')):
+        if messagebox.askokcancel(self.translator.getTranslation(self.config.language, 'Quit'), self.translator.getTranslation(self.config.language, 'Do you want to quit?')):
             self.saveConfigToFile(defaultConfPath)
             self.win.destroy()
 
-
-if __name__ == '__main__':
-    Uploader = Uploader(model, language)

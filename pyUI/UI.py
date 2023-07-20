@@ -13,17 +13,14 @@ The UI file for the project. This file contains the UI class.
 
 
 # New imports
-from utils.config import Config
-from utils.translator import Translator
 
-from FirmwareUploader import *
-from SkillComposer import *
 from Calibrator import *
-from commonVar import *
+from SkillComposer import *
 
 translator = Translator()
 
-apps = ['Firmware Uploader', 'Joint Calibrator', 'Skill Composer']  # This is used in creating the buttons for other parts of the app, this needs to
+apps = ['Firmware Uploader', 'Joint Calibrator',
+        'Skill Composer']  # This is used in creating the buttons for other parts of the app, this needs to
 
 
 # be rewritten
@@ -46,9 +43,11 @@ class UI:
 
         self.logger.debug("Config Initialised")
 
-        self.logger.debug("Initializing Translator")    # This is used to translate the UI into different languages
+        self.logger.debug("Initializing Translator")  # This is used to translate the UI into different languages
         self.translator = Translator()
         self.logger.debug("Translator Initialised")
+
+        self.start()
 
     def start(self):
         """
@@ -74,7 +73,8 @@ class UI:
         self.modelLabel.grid(row=0, column=0, pady=10)
 
         for i in range(len(apps)):  # What the fuck is this trying to do
-            Button(self.window, text=translator.getTranslation(self.config.language, apps[i]), font=self.myFont, fg='blue', width=bw, relief='raised',
+            Button(self.window, text=translator.getTranslation(self.config.language, apps[i]), font=self.myFont,
+                   fg='blue', width=bw, relief='raised',
                    command=lambda app=apps[i]: self.utility(app)).grid(row=1 + i, column=0, padx=10, pady=(0, 10))
 
         self.ready = True
@@ -101,7 +101,8 @@ class UI:
         self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'lanMenu'), menu=lan)
 
         helpMenu = Menu(self.menubar, tearoff=0)
-        helpMenu.add_command(label=self.translator.getTranslation(self.config.language, 'About'), command=self.showAbout)
+        helpMenu.add_command(label=self.translator.getTranslation(self.config.language, 'About'),
+                             command=self.showAbout)
         self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'Help'), menu=helpMenu)
 
         self.window.config(menu=self.menubar)
@@ -140,18 +141,18 @@ class UI:
             self.window.title(translator.getTranslation(self.config.language, 'uiTitle'))
 
             for i in range(len(apps)):  # I have no idea what this is trying to do but it does not work
-                self.window.winfo_children()[1 + i].config(text=self.translator.getTranslation(self.config.language, apps[i]))
-
+                self.window.winfo_children()[1 + i].config(
+                    text=self.translator.getTranslation(self.config.language, apps[i]))
 
     def utility(self, app):
         self.window.destroy()
 
         if app == 'Firmware Uploader':
-            Uploader(model, language)
+            Uploader(self.translator, self.config)
         elif app == 'Joint Calibrator':
-            Calibrator(model, language)
+            Calibrator(self.translator, self.config)
         elif app == 'Skill Composer':
-            SkillComposer(model, language)
+            SkillComposer(self.translator, self.config)
         elif app == 'Task Scheduler':
             print('schedule')
 
@@ -162,8 +163,6 @@ class UI:
     def on_closing(self):
         if messagebox.askokcancel(self.translator.getTranslation(self.config.language, 'Quit'),
                                   self.translator.getTranslation(self.config.language, 'Do you want to quit?')):
-            # configuration = [self.defaultLan, model, self.defaultPath, self.defaultSwVer, self.defaultBdVer,
-            #                  self.defaultMode]    # self.defaultCreator, self.defaultLocation
             self.window.destroy()
 
 
