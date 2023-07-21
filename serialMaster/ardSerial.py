@@ -2,7 +2,9 @@
 # -*- coding: UTF-8 -*-
 
 # Trying to get this working
-from utils import Translator
+from rewrite.utils import create_logger, Translator, Config
+
+logger = create_logger("ardSerial", "ardSerial", "ardSerial_", "DEBUG")
 
 translator = Translator()
 

@@ -1955,6 +1955,21 @@ class Translator:
             self.logger.error(f"Key {text} not found for language {self.language}")
             raise error
 
+    def getIndependentTranslation(self, language: str, element: str) -> str:
+        """
+        Gets the translation for a given string in the above translation dictionaries in a specific language.
+
+        Returns:
+            str: Translated text
+        """
+        try:
+            return self.languageList[language][element]
+
+        except KeyError as error:  # Catches the error in order for the error to be logged and then re-raises the error
+            self.logger.error(f"Key {element} not found for language {language}")
+            raise error
+
+
 
 # Classes named after the language they translate to. This is done to make it easier to add new languages.
 class English:
