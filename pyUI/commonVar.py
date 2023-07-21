@@ -1,13 +1,14 @@
 """
 This file contains all the common variables and functions used in the UI.
 """
-# New Code
-import sys
 
-sys.path.append('../serialMaster/')
+# New Code
+from sys import path, version
+
+path.append('../serialMaster/')
 resourcePath = './resources/'
 releasePath = './release'
-sys.path.append(resourcePath)
+path.append(resourcePath)
 from tkinter import *
 from tkinter import messagebox
 from PIL import ImageTk, Image
@@ -15,7 +16,7 @@ import platform
 import os
 
 NyBoard_version = 'NyBoard_V1_2'
-verNumber = sys.version.split('(')[0].split()[0]
+verNumber = version.split('(')[0].split()[0]
 verNumber = verNumber.split('.')
 print(verNumber)
 # verNumber = [2,1,1] #for testing
@@ -52,6 +53,9 @@ ports = []
 
 
 def mkdir(path):
+    """
+    This is shit.
+    """
     # delete spaces in the path string
     path = path.strip()
     # delete the '\' at the end of path string
@@ -77,11 +81,14 @@ if platform.system() == "Windows":  # for Windows
     homeDri = os.getenv('HOMEDRIVE')
     homePath = os.getenv('HomePath')
     configDir = homeDri + '\\' + homePath
+
 else:  # for Linux & macOS
     seperation = '/'
     home = os.getenv('HOME')
     configDir = home
 
+# This is shit and needs to be removed, you should only be storing files inside the project. Storing them in hidden
+# places like .config just confuses the user and polutes their system
 configDir = configDir + seperation + '.config' + seperation + 'Petoi'
 mkdir(configDir)
 defaultConfPath = configDir + seperation + 'defaultConfig.txt'

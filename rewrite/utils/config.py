@@ -178,6 +178,20 @@ class Config:
         """
         self._set_value("mode", value)
 
+    @property
+    def windowsSize(self) -> str:
+        """
+        Gets the windows size from the config file.
+        """
+        return self._get_value("windowsSize")
+
+    @windowsSize.setter
+    def windowsSize(self, value):
+        """
+        Sets the windows size in the config file.
+        """
+        self._set_value("windowsSize", value)
+
     def _get_value(self, key: str):
         """
         Gets a value from the config file. This method is private and should not be called outside of this class.

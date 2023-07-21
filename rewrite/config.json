@@ -4,5 +4,6 @@
   "path": "./release",
   "software_version": "2.0",
   "board_version": "NyBoard_V1_2",
-  "mode": "Standard"
+  "mode": "Standard",
+  "windowsSize": "800x600"
 }

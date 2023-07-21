@@ -1913,7 +1913,7 @@ class Translator:
     Translator class for translating text to different languages for the UI.
     """
 
-    def __init__(self):
+    def __init__(self, language: str = "English"):
         self.logger = create_logger("Translator", "Translator", "Translator_", level="ERROR")
         self.languageList = {
             'English': textEN,
@@ -1926,6 +1926,7 @@ class Translator:
             'Thai': textTH,
             # to be added
         }
+        self.language = language
 
     @property
     def languages(self) -> list:
@@ -1937,7 +1938,7 @@ class Translator:
         """
         return list(self.languageList.keys())
 
-    def getTranslation(self, language: str, text: str) -> str:
+    def getTranslation(self, text: str) -> str:
         """
         Gets the translation for a given string in the above translation dictionaries in a specific language.
 
@@ -1948,10 +1949,10 @@ class Translator:
             KeyError: When the requested text is not found in the luggage pack.
         """
         try:
-            return self.languageList[language][text]
+            return self.languageList[self.language][text]
 
         except KeyError as error:  # Catches the error in order for the error to be logged and then re-raises the error
-            self.logger.error(f"Key {text} not found for language {language}")
+            self.logger.error(f"Key {text} not found for language {self.language}")
             raise error
 
 

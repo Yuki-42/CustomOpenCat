@@ -3,7 +3,7 @@
 
 # New imports
 from time import sleep
-from utils import create_logger, Translator, Config
+from rewrite.utils import create_logger, Translator, Config
 
 from commonVar import *
 from serialMaster.ardSerial import send, closeAllSerial
@@ -24,7 +24,6 @@ class Calibrator:
         connectPort(self.goodPorts)
         self.model = config.model
 
-        language = lan
         self.winCalib = Tk()
         self.winCalib.title(self.translator.getTranslation(self.config.language, 'calibTitle'))
         self.winCalib.geometry('+200+100')

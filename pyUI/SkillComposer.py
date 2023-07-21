@@ -9,15 +9,16 @@
 
 # New imports
 from time import time, sleep
-from utils import Translator, create_logger, Config
+from rewrite.utils import Translator, create_logger, Config
 from FirmwareUploader import Uploader
 from datetime import datetime
 from serialMaster.ardSerial import connectPort, postureDict, keepCheckingPort, send, printH, closeAllSerial, model
+from random import choice
 
 import sys
 
 sys.path.append('../serialMaster/')
-import random
+
 import tkinter.font as tkFont
 import copy
 import threading
@@ -755,14 +756,14 @@ class SkillComposer:
 
         vNote = StringVar()
         #        letters = string.ascii_lowercase + string.ascii_uppercase + string.digits
-        #        vNote.set('note: '+ ''.join(random.choice(letters) for i in range(5)) )
+        #        vNote.set('note: '+ ''.join(choice(letters) for i in range(5)) )
 
         while True:
-            note = random.choice(animalNames)
+            note = choice(animalNames)
             if len(note) <= 5:
                 break
         vNote.set(note + str(currentRow))  # 'note')
-        color = rgbtohex(random.choice(range(64, 192)), random.choice(range(64, 192)), random.choice(range(64, 192)))
+        color = rgbtohex(choice(range(64, 192)), choice(range(64, 192)), choice(range(64, 192)))
         Entry(singleFrame, width=self.frameItemWidth[cNote], fg=color, textvariable=vNote, bd=1).grid(row=0,
                                                                                                       column=cNote)
 
@@ -807,7 +808,7 @@ class SkillComposer:
             self.activeFrame -= 1
         if self.frameList == []:
             self.scrollable_frame.update()
-            time.sleep(0.5)
+            sleep(0.5)
             self.restartSkillEditor()
 
     def getWidget(self, row, idx):
@@ -1901,4 +1902,4 @@ if __name__ == '__main__':
 # unused text codes for references
 # import string
 #        letters = animalNames#string.ascii_lowercase + string.ascii_uppercase + string.digits
-#        vNote.set('note: '+ ''.join(random.choice(letters) for i in range(5)) )#'note')
+#        vNote.set('note: '+ ''.join(choice(letters) for i in range(5)) )#'note')

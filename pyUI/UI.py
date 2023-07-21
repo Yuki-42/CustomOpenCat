@@ -56,25 +56,27 @@ class UI:
         self.logger.debug("Initializing Window")
         self.window = Tk()
 
-        self.OSname = self.window.call('tk', 'windowingsystem')
-        if self.OSname == 'win32':
+        osName = self.window.call('tk', 'windowingsystem')  # This gets the current os name so that the UI can
+        # be adjusted for the OS that it is running on. There is definitely a better way to do this but I don't know
+        # what it is.
+
+        if osName == 'win32':
             self.window.iconbitmap(r'./resources/Petoi.ico')
             self.window.geometry('398x270+800+400')
         else:
             self.window.geometry('+800+400')
-            self.backgroundColor = 'gray'
+            self.backgroundColor = 'gray'  # This is unused
 
-        self.myFont = tkFont.Font(
-            family='Times New Roman', size=20, weight='bold')
+        self.myFont = tkFont.Font(family='Times New Roman', size=20, weight='bold')  # This does not need to be a property
+        # of the class
         self.window.title(translator.getTranslation(self.config.language, 'uiTitle'))
         self.createMenu()
-        bw = 23
         self.modelLabel = Label(self.window, text=model, font=self.myFont)
         self.modelLabel.grid(row=0, column=0, pady=10)
 
         for i in range(len(apps)):  # What the fuck is this trying to do
             Button(self.window, text=translator.getTranslation(self.config.language, apps[i]), font=self.myFont,
-                   fg='blue', width=bw, relief='raised',
+                   fg='blue', width=23, relief='raised',
                    command=lambda app=apps[i]: self.utility(app)).grid(row=1 + i, column=0, padx=10, pady=(0, 10))
 
         self.ready = True
@@ -88,8 +90,10 @@ class UI:
         self.menubar = Menu(self.window, background='#ff8000', foreground='black', activebackground='white',
                             activeforeground='black')
         file = Menu(self.menubar, tearoff=0, background='#ffcc99', foreground='black')
+
         for key in NaJoints:
             file.add_command(label=key, command=lambda model=key: self.changeModel(model))
+
         self.menubar.add_cascade(label=self.translator.getTranslation(self.config.language, 'Model'), menu=file)
 
         lan = Menu(self.menubar, tearoff=0)
@@ -111,7 +115,7 @@ class UI:
         global model
         model = copy.deepcopy(modelName)
         self.modelLabel.configure(text=model)
-        print(model)
+
 
     def changeLan(self, newLanguage):  # Changes the window language
         """
@@ -154,7 +158,7 @@ class UI:
         elif app == 'Skill Composer':
             SkillComposer(self.translator, self.config)
         elif app == 'Task Scheduler':
-            print('schedule')
+            pass
 
     def showAbout(self):
         messagebox.showinfo('Petoi Desktop App',
